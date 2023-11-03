@@ -1341,7 +1341,7 @@ var trendResponse []TrendResponse
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
-	isuList := []Isu{}
+	var isuList []Isu
 	isuList = isuCache.GetAll()
 	if len(isuList) == 0 || isuList == nil {
 		err := db.Select(&isuList, "SELECT * FROM `isu`")
@@ -1356,12 +1356,12 @@ func getTrend(c echo.Context) error {
 		characterIsuMap[isu.Character] = append(characterIsuMap[isu.Character], isu)
 	}
 
-	res := []TrendResponse{}
+	var res []TrendResponse
 
 	for character, isuList := range characterIsuMap {
-		characterInfoIsuConditions := []*TrendCondition{}
-		characterWarningIsuConditions := []*TrendCondition{}
-		characterCriticalIsuConditions := []*TrendCondition{}
+		var characterInfoIsuConditions []*TrendCondition
+		var characterWarningIsuConditions []*TrendCondition
+		var characterCriticalIsuConditions []*TrendCondition
 		for _, isu := range isuList {
 			// conditions := []IsuCondition{}
 			// err = db.Select(&conditions,
@@ -1377,11 +1377,7 @@ func getTrend(c echo.Context) error {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
-			conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
-			if err != nil {
-				c.Logger().Error(err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
+			conditionLevel := isuLastCondition.ConditionLevel
 			trendCondition := TrendCondition{
 				ID:        isu.ID,
 				Timestamp: isuLastCondition.Timestamp.Unix(),
