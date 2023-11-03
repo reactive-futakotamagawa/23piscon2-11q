@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -1198,6 +1199,9 @@ type PostIsuConditionRequests struct {
 
 var postIsuConditionRequests []PostIsuConditionRequests
 var nextTime time.Time
+var nextTimeMutex sync.Mutex
+
+const nextTimeConst = time.Second * 1
 
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
@@ -1255,7 +1259,8 @@ func postIsuCondition(c echo.Context) error {
 	args := make([]interface{}, 0, len(postIsuConditionRequests)*5)
 
 	if nextTime.Before(time.Now()) {
-		nextTime = time.Now().Add(time.Second * 1)
+
+		nextTime = time.Now().Add(nextTimeConst)
 		doRequest := postIsuConditionRequests
 		postIsuConditionRequests = []PostIsuConditionRequests{}
 
