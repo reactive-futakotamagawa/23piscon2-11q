@@ -508,7 +508,7 @@ func getIsuList(c echo.Context) error {
 		// 	isu.JIAIsuUUID)
 		conditions, err := isuConditionsCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, sql.ErrNoRows) || len(conditions) == 0 {
 				foundLastCondition = false
 			} else {
 				c.Logger().Errorf("db error: %v", err)
