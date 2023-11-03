@@ -268,6 +268,39 @@ func main() {
 		return
 	}
 
+	ticker := time.NewTicker(1000 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case _ = <-ticker.C:
+				doRequest := postIsuConditionRequests
+				postIsuConditionRequests = []PostIsuConditionRequests{}
+				args := make([]interface{}, 0, len(doRequest)*5)
+
+				query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
+				for i, cond := range doRequest {
+					timestamp := time.Unix(cond.Timestamp, 0)
+
+					if i > 0 {
+						query += ", "
+					}
+					query += "(?, ?, ?, ?, ?)"
+					args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
+					isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
+				}
+				// default: tx
+				if _, err = db.Exec(query, args...); err != nil {
+					fmt.Println("POST DB error: %v", err)
+				}
+				//err = tx.Commit()
+				//if err != nil {
+				//	c.Logger().Errorf("db error: %v", err)
+				//	return c.NoContent(http.StatusInternalServerError)
+				//}
+			}
+		}
+	}()
+
 	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
 	e.Logger.Fatal(e.Start(serverPort))
 }
@@ -1180,11 +1213,21 @@ func getTrend(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+type PostIsuConditionRequests struct {
+	JiaIsuUUID string `json:"jia_isu_uuid"`
+	Timestamp  int64  `json:"timestamp"`
+	IsSitting  bool   `json:"is_sitting"`
+	Condition  string `json:"condition"`
+	Message    string `json:"message"`
+}
+
+var postIsuConditionRequests []PostIsuConditionRequests
+
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
-	dropProbability := 0.9
+	dropProbability := 0.7
 	if rand.Float64() <= dropProbability {
 		c.Logger().Warnf("drop post isu condition request")
 		return c.NoContent(http.StatusAccepted)
@@ -1194,24 +1237,27 @@ func postIsuCondition(c echo.Context) error {
 	if jiaIsuUUID == "" {
 		return c.String(http.StatusBadRequest, "missing: jia_isu_uuid")
 	}
-
-	req := []PostIsuConditionRequest{}
+	var req []PostIsuConditionRequest
 	err := c.Bind(&req)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "bad request body")
 	} else if len(req) == 0 {
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
-
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
+	for _, cond := range req {
+		if !isValidConditionFormat(cond.Condition) {
+			return c.String(http.StatusBadRequest, "bad request body")
+		}
 	}
-	defer tx.Rollback()
-
+	//tx, err := db.Beginx()
+	//if err != nil {
+	//	c.Logger().Errorf("db error: %v", err)
+	//	return c.NoContent(http.StatusInternalServerError)
+	//}
+	//defer tx.Rollback()
 	var count int
-	err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	// default: tx
+	err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1220,33 +1266,16 @@ func postIsuCondition(c echo.Context) error {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
-	args := make([]interface{}, 0, len(req)*5)
-	query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
-	for i, cond := range req {
-		timestamp := time.Unix(cond.Timestamp, 0)
-
-		if !isValidConditionFormat(cond.Condition) {
-			return c.String(http.StatusBadRequest, "bad request body")
+	for _, r := range req {
+		appendRequest := PostIsuConditionRequests{
+			JiaIsuUUID: jiaIsuUUID,
+			Timestamp:  r.Timestamp,
+			IsSitting:  r.IsSitting,
+			Condition:  r.Condition,
+			Message:    r.Message,
 		}
-
-		if i > 0 {
-			query += ", "
-		}
-		query += "(?, ?, ?, ?, ?)"
-		args = append(args, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
+		postIsuConditionRequests = append(postIsuConditionRequests, appendRequest)
 	}
-	if _, err := tx.Exec(query, args...); err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
 
 	return c.NoContent(http.StatusAccepted)
 }
