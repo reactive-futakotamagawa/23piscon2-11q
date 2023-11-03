@@ -1258,8 +1258,8 @@ func postIsuCondition(c echo.Context) error {
 	}
 	args := make([]interface{}, 0, len(postIsuConditionRequests)*5)
 
-	if nextTime.Before(time.Now()) {
-
+	if nextTimeMutex.TryLock() && nextTime.Before(time.Now()) {
+		nextTimeMutex.Lock()
 		nextTime = time.Now().Add(nextTimeConst)
 		doRequest := postIsuConditionRequests
 		postIsuConditionRequests = []PostIsuConditionRequests{}
@@ -1286,6 +1286,7 @@ func postIsuCondition(c echo.Context) error {
 		//}
 
 		isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
+		nextTimeMutex.Unlock()
 		return c.NoContent(http.StatusAccepted)
 	} else {
 		return c.NoContent(http.StatusAccepted)
