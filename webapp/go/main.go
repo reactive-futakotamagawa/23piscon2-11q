@@ -233,15 +233,6 @@ func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition
 	return &condition, nil
 }
 
-type bulkInsertArgs struct {
-	JIAIsuUUID     string    `db:"jia_isu_uuid"`
-	Timestamp      time.Time `db:"timestamp"`
-	IsSitting      bool      `db:"is_sitting"`
-	Condition      string    `db:"condition"`
-	Message        string    `db:"message"`
-	ConditionLevel string    `db:"condition_level"`
-}
-
 func main() {
 	go standalone.Integrate(":8888")
 
@@ -301,33 +292,31 @@ func main() {
 	go func() {
 		for {
 			select {
-			case <-ticker.C:
-				reqs := make([]PostIsuConditionRequests, len(postIsuConditionRequests))
-				copy(reqs, postIsuConditionRequests)
-				postIsuConditionRequests = make([]PostIsuConditionRequests, 0, 1000)
-				// doRequest := postIsuConditionRequests
+			case _ = <-ticker.C:
+				doRequest := postIsuConditionRequests
+				postIsuConditionRequests = []PostIsuConditionRequests{}
+				args := make([]interface{}, 0, len(doRequest)*5)
 
-				if len(reqs) == 0 {
-					continue
-				}
+				query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
+				for i, cond := range doRequest {
+					timestamp := time.Unix(cond.Timestamp, 0)
 
-				args := make([]bulkInsertArgs, 0, len(reqs))
-				for _, a := range reqs {
-					args = append(args, bulkInsertArgs{
-						JIAIsuUUID: a.JiaIsuUUID,
-						Timestamp:  time.Unix(a.Timestamp, 0),
-						IsSitting:  a.IsSitting,
-						Condition:  a.Condition,
-						Message:    a.Message,
-					})
+					if i > 0 {
+						query += ", "
+					}
+					query += "(?, ?, ?, ?, ?, ?)"
+					args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.ConditionLevel)
+					isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
 				}
-				fmt.Printf("count: %d", len(args))
-				_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message, :condition_level)", args)
 				// default: tx
-				if err != nil {
-					fmt.Printf("POST DB error: %v\n", err)
+				if _, err = db.Exec(query, args...); err != nil {
+					// fmt.Println("POST DB error: %v", err)
 				}
-
+				//err = tx.Commit()
+				//if err != nil {
+				//	c.Logger().Errorf("db error: %v", err)
+				//	return c.NoContent(http.StatusInternalServerError)
+				//}
 			}
 		}
 	}()
