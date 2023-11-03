@@ -1103,7 +1103,7 @@ func getTrend(c echo.Context) error {
 			IsuID int `db:"isuID"`
 			IsuCondition
 		}
-		err = db.Select(&conditions, "SELECT `isu`.`id`, `isu_condition`.* FROM `isu` JOIN `isu_condition` ON `isu`.`jia_isu_uuid` = `isu_condition`.`jia_isu_uuid` WHERE `isu`.`character` = ? ORDER BY `isu_condition`.`timestamp` DESC", character.Character)
+		err = db.Select(&conditions, "SELECT `isu`.`id` AS isuID, `isu_condition`.* FROM `isu` JOIN `isu_condition` ON `isu`.`jia_isu_uuid` = `isu_condition`.`jia_isu_uuid` WHERE `isu`.`character` = ? ORDER BY `isu_condition`.`timestamp` DESC", character.Character)
 		if err != nil {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
