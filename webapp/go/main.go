@@ -508,12 +508,15 @@ func getIsuList(c echo.Context) error {
 		// 	isu.JIAIsuUUID)
 		conditions, err := isuConditionsCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) || len(conditions) == 0 {
+			if errors.Is(err, sql.ErrNoRows) {
 				foundLastCondition = false
 			} else {
 				c.Logger().Errorf("db error: %v", err)
 				return c.NoContent(http.StatusInternalServerError)
 			}
+		}
+		if len(conditions) == 0 {
+			foundLastCondition = false
 		}
 
 		var formattedCondition *GetIsuConditionResponse
