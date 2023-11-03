@@ -30,10 +30,10 @@ bind-address            = 0.0.0.0
 #
 # * Fine Tuning
 #
-#key_buffer_size        = 16M
-#max_allowed_packet     = 16M
-#thread_stack           = 192K
-#thread_cache_size      = 8
+key_buffer_size        = 16M
+max_allowed_packet     = 16M
+thread_stack           = 192K
+thread_cache_size      = 8
 # This replaces the startup script and checks MyISAM tables if needed
 # the first time they are touched
 #myisam_recover_options = BACKUP
@@ -44,8 +44,8 @@ bind-address            = 0.0.0.0
 #
 # * Query Cache Configuration
 #
-#query_cache_limit      = 1M
-query_cache_size        = 16M
+query_cache_limit      = 10M
+query_cache_size        = 160M
 
 #
 # * Logging and Replication
@@ -127,13 +127,13 @@ innodb_buffer_pool_size = 2400MB
 # InnoDBの更新ログを記録するディスク上のファイルサイズ(innodb_buffer_pool_sizeの4分の1程度)
 innodb_log_file_size = 600MB
 # innoDBの更新ログを保持するメモリ(default: 8MB)、大量のデータの更新に効く
-innodb_log_buffer_size = 50MB
+innodb_log_buffer_size = 200MB
 # 1に設定するとトランザクション単位でログを出力するが 2 を指定すると1秒間に1回ログファイルに出力するようになる
 innodb_flush_log_at_trx_commit = 0
 # データファイル、ログファイルの読み書き方式を指定する (OSによるディスクキャッシュとの2重キャッシュを防ぐ)
 innodb_flush_method = O_DIRECT
 # ORDER BYやGROUP BYのときに使われるメモリ量
-innodb_sort_buffer_size = 10MB
+innodb_sort_buffer_size = 40MB
 
 # this is only for embedded server
 [embedded]
