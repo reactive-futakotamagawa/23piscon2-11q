@@ -219,6 +219,10 @@ func init() {
 	if err != nil {
 		log.Fatalf("failed to parse ECDSA public key: %v", err)
 	}
+
+	http.DefaultTransport.(*http.Transport).MaxIdleConns = 0           // infinite
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 1024 // default: 2
+	http.DefaultTransport.(*http.Transport).ForceAttemptHTTP2 = true   // go1.13以上
 }
 
 // SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1
@@ -419,7 +423,8 @@ func main() {
 		e.Logger.Fatalf("failed to connect db: %v", err)
 		return
 	}
-	db.SetMaxOpenConns(10)
+	db.SetMaxOpenConns(1024)
+	db.SetMaxIdleConns(1024)
 	defer db.Close()
 
 	postIsuConditionTargetBaseURL = os.Getenv("POST_ISUCONDITION_TARGET_BASE_URL")
