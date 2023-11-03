@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -233,6 +234,31 @@ func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition
 	return &condition, nil
 }
 
+type IsuCache struct {
+	Isu map[string]Isu
+	mu  sync.Mutex
+}
+
+var isuCache IsuCache
+
+func (c *IsuCache) Set(isu []Isu) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, i := range isu {
+		c.Isu[i.JIAIsuUUID] = i
+	}
+}
+
+func (c *IsuCache) GetAll() []Isu {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	isu := make([]Isu, 0, len(c.Isu))
+	for _, i := range c.Isu {
+		isu = append(isu, i)
+	}
+	return isu
+}
+
 func main() {
 	go standalone.Integrate(":8888")
 
@@ -287,6 +313,8 @@ func main() {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
 	}
+
+	isuCache = IsuCache{Isu: make(map[string]Isu)}
 
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	go func() {
@@ -1222,10 +1250,14 @@ func calculateConditionLevel(condition string) (string, error) {
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
 	isuList := []Isu{}
-	err := db.Select(&isuList, "SELECT * FROM `isu`")
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
+	isuList = isuCache.GetAll()
+	if len(isuList) == 0 || isuList == nil {
+		err := db.Select(&isuList, "SELECT * FROM `isu`")
+		if err != nil {
+			c.Logger().Errorf("db error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		isuCache.Set(isuList)
 	}
 	characterIsuMap := map[string][]Isu{}
 	for _, isu := range isuList {
