@@ -378,8 +378,13 @@ func main() {
 				isuList = isuCache.GetAll()
 				if len(isuList) == 0 || isuList == nil {
 					err := db.Select(&isuList, "SELECT * FROM `isu`")
+					if errors.Is(err, sql.ErrNoRows) {
+						fmt.Println("no rows tickerGetTrend")
+						continue
+					}
 					if err != nil {
 						e.Logger.Errorf("db error: %v", err)
+						continue
 					}
 					isuCache.Set(isuList)
 				}
