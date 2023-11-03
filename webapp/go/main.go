@@ -820,6 +820,7 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
 	}
+	isuConditionsCacheByIsuUUID.Forget(jiaIsuUUID)
 
 	for rows.Next() {
 		err = rows.StructScan(&condition)
@@ -1158,6 +1159,9 @@ func getTrend(c echo.Context) error {
 			if err != nil {
 				c.Logger().Errorf("db error: %v", err)
 				return c.NoContent(http.StatusInternalServerError)
+			}
+			if len(isuConditions) == 0 {
+				continue
 			}
 
 			isuLastCondition := isuConditions[0]
