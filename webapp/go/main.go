@@ -1108,33 +1108,30 @@ func getTrend(c echo.Context) error {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
-		isuConditionLevelMap := make(map[int]string)
+		isuConditionLevelMap := make(map[int]struct{})
 		for i := range conditions {
-			if err != nil {
-				c.Logger().Error(err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
-			trendCondition := TrendCondition{
-				ID:        conditions[i].IsuID,
-				Timestamp: conditions[i].Timestamp.Unix(),
-			}
 			//最新のコンディションをisuのコンディションとする。
 			if _, ok := isuConditionLevelMap[conditions[i].IsuID]; !ok {
+				trendCondition := TrendCondition{
+					ID:        conditions[i].IsuID,
+					Timestamp: conditions[i].Timestamp.Unix(),
+				}
 				conditionLevel, err := calculateConditionLevel(conditions[i].Condition)
 				if err != nil {
 					c.Logger().Error(err)
 					return c.NoContent(http.StatusInternalServerError)
 				}
-				isuConditionLevelMap[conditions[i].IsuID] = conditionLevel
+				switch conditionLevel {
+				case "info":
+					characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
+				case "warning":
+					characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
+				case "critical":
+					characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
+				}
+				isuConditionLevelMap[conditions[i].IsuID] = struct{}{}
 			}
-			switch isuConditionLevelMap[conditions[i].IsuID] {
-			case "info":
-				characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
-			case "warning":
-				characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
-			case "critical":
-				characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
-			}
+
 		}
 
 		// sort.Slice(characterInfoIsuConditions, func(i, j int) bool {
