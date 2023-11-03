@@ -407,6 +407,11 @@ func postInitialize(c echo.Context) error {
 
 	isuConditionCacheByIsuUUID.Purge()
 
+	_, err = db.Exec("ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT")
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
