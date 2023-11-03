@@ -93,6 +93,17 @@ type IsuCondition struct {
 	CreatedAt  time.Time `db:"created_at"`
 }
 
+type GetIsuCondition struct {
+	ID             int       `db:"id"`
+	JIAIsuUUID     string    `db:"jia_isu_uuid"`
+	Timestamp      time.Time `db:"timestamp"`
+	IsSitting      bool      `db:"is_sitting"`
+	Condition      string    `db:"condition"`
+	Message        string    `db:"message"`
+	CreatedAt      time.Time `db:"created_at"`
+	ConditionLevel string    `db:"condition_level"`
+}
+
 type MySQLConnectionEnv struct {
 	Host     string
 	Port     string
@@ -1069,23 +1080,46 @@ func getIsuConditions(c echo.Context) error {
 func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, conditionLevel map[string]interface{}, startTime time.Time,
 	limit int, isuName string) ([]*GetIsuConditionResponse, error) {
 
-	conditions := []IsuCondition{}
+	var conditions []GetIsuCondition
 	var err error
+
+	conditionLevelQuery := ""
+	moreThanOne := false
+	if _, ok := conditionLevel[conditionLevelInfo]; ok {
+		conditionLevelQuery += "'" + conditionLevelInfo + "'"
+		moreThanOne = true
+	}
+	if _, ok := conditionLevel[conditionLevelWarning]; ok {
+		if moreThanOne {
+			conditionLevelQuery += ","
+		}
+		conditionLevelQuery += "'" + conditionLevelWarning + "'"
+		moreThanOne = true
+	}
+	if _, ok := conditionLevel[conditionLevelCritical]; ok {
+		if moreThanOne {
+			conditionLevelQuery += ","
+		}
+		conditionLevelQuery += "'" + conditionLevelCritical + "'"
+		moreThanOne = true
+	}
 
 	if startTime.IsZero() {
 		err = db.Select(&conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
-				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime,
+				"   AND `condition_level` IN ("+conditionLevelQuery+")"+
+				"	ORDER BY `timestamp` DESC LIMIT ?",
+			jiaIsuUUID, endTime, limit,
 		)
 	} else {
 		err = db.Select(&conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
 				"	AND ? <= `timestamp`"+
-				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime, startTime,
+				"   AND `condition_level` IN ("+conditionLevelQuery+")"+
+				"	ORDER BY `timestamp` DESC LIMIT ?",
+			jiaIsuUUID, endTime, startTime, limit,
 		)
 	}
 	if err != nil {
