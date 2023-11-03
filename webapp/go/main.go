@@ -1100,7 +1100,7 @@ func getTrend(c echo.Context) error {
 		characterCriticalIsuConditions := []*TrendCondition{}
 
 		var conditions []struct {
-			ID int `db:"isuID"`
+			IsuID int `db:"isuID"`
 			IsuCondition
 		}
 		err = db.Select(&conditions, "SELECT `isu`.`id`, `isu_condition`.* FROM `isu` JOIN `isu_condition` ON `isu`.`jia_isu_uuid` = `isu_condition`.`jia_isu_uuid` WHERE `isu`.`character` = ? ORDER BY `isu_condition`.`timestamp` DESC", character.Character)
@@ -1115,7 +1115,7 @@ func getTrend(c echo.Context) error {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 			trendCondition := TrendCondition{
-				ID:        conditions[i].ID,
+				ID:        conditions[i].IsuID,
 				Timestamp: conditions[i].Timestamp.Unix(),
 			}
 			switch conditionLevel {
