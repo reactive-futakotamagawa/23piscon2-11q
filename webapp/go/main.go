@@ -1237,7 +1237,7 @@ func postIsuCondition(c echo.Context) error {
 	//defer tx.Rollback()
 	var count int
 	// default: tx
-	err = db.Get(&count, "SELECT COUNT(1) FROM `isu` WHERE `jia_isu_uuid` = ? LIMIT 1", jiaIsuUUID)
+	err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
