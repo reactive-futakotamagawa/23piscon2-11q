@@ -1188,6 +1188,16 @@ func getTrend(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+type PostIsuConditionRequests struct {
+	JiaIsuUUID string `json:"jia_isu_uuid"`
+	Timestamp  int64  `json:"timestamp"`
+	IsSitting  bool   `json:"is_sitting"`
+	Condition  string `json:"condition"`
+	Message    string `json:"message"`
+}
+
+var postIsuConditionRequests []PostIsuConditionRequests
+
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
@@ -1203,12 +1213,23 @@ func postIsuCondition(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "missing: jia_isu_uuid")
 	}
 
-	req := []PostIsuConditionRequest{}
+	var req []PostIsuConditionRequest
 	err := c.Bind(&req)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "bad request body")
 	} else if len(req) == 0 {
 		return c.String(http.StatusBadRequest, "bad request body")
+	}
+
+	for _, r := range req {
+		appendRequest := PostIsuConditionRequests{
+			JiaIsuUUID: jiaIsuUUID,
+			Timestamp:  r.Timestamp,
+			IsSitting:  r.IsSitting,
+			Condition:  r.Condition,
+			Message:    r.Message,
+		}
+		postIsuConditionRequests = append(postIsuConditionRequests, appendRequest)
 	}
 
 	tx, err := db.Beginx()
@@ -1219,7 +1240,7 @@ func postIsuCondition(c echo.Context) error {
 	defer tx.Rollback()
 
 	var count int
-	err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	err = tx.Get(&count, "SELECT COUNT(id) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
