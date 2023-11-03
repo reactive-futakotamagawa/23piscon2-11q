@@ -412,6 +412,24 @@ func postInitialize(c echo.Context) error {
 		fmt.Println(err)
 	}
 
+	var conditions []IsuCondition
+	err = db.Select(&conditions, "SELECT * FROM `isu_condition`")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for _, condition := range conditions {
+		conditionLevel, err := calculateConditionLevel(condition.Condition)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		_, err = db.Exec("UPDATE `isu_condition` SET `condition_level` = ? WHERE `id` = ?", conditionLevel, condition.ID)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
