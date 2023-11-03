@@ -22,7 +22,7 @@ CREATE TABLE `isu_condition` (
   `is_sitting` TINYINT(1) NOT NULL,
   `condition` VARCHAR(255) NOT NULL,
   `condition_level` VARCHAR(255) NOT NULL,
-  `message` VARCHAR(255) NOT NULL DEFAULT '',
+  `message` VARCHAR(255) DEFAULT '',
   `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY(`id`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
