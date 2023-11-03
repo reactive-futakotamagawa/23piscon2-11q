@@ -808,6 +808,8 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	isuCache.Set([]Isu{isu})
+
 	return c.JSON(http.StatusCreated, isu)
 }
 
