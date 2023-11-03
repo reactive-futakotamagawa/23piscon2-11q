@@ -504,7 +504,6 @@ func getIsuList(c echo.Context) error {
 		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
 		// 	isu.JIAIsuUUID)
 		conditions, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
-		lastCondition = conditions[len(conditions)-1]
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				foundLastCondition = false
@@ -513,6 +512,7 @@ func getIsuList(c echo.Context) error {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 		}
+		lastCondition = conditions[len(conditions)-1]
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {
