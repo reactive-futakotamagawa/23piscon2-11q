@@ -1105,6 +1105,11 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 		moreThanOne = true
 	}
 
+	fmt.Println("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = " + jiaIsuUUID +
+		"	AND `timestamp` < " + endTime.String() +
+		"   AND `condition_level` IN (" + conditionLevelQuery + ")" +
+		"	ORDER BY `timestamp` DESC LIMIT 20")
+
 	if startTime.IsZero() {
 		err = db.Select(&conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
