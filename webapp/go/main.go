@@ -285,15 +285,15 @@ func main() {
 				postIsuConditionRequests = []PostIsuConditionRequests{}
 				args := make([]interface{}, 0, len(doRequest)*5)
 
-				query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
+				query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
 				for i, cond := range doRequest {
 					timestamp := time.Unix(cond.Timestamp, 0)
 
 					if i > 0 {
 						query += ", "
 					}
-					query += "(?, ?, ?, ?, ?)"
-					args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
+					query += "(?, ?, ?, ?, ?, ?)"
+					args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.ConditionLevel)
 					isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
 				}
 				// default: tx
@@ -1222,11 +1222,12 @@ func getTrend(c echo.Context) error {
 }
 
 type PostIsuConditionRequests struct {
-	JiaIsuUUID string `json:"jia_isu_uuid"`
-	Timestamp  int64  `json:"timestamp"`
-	IsSitting  bool   `json:"is_sitting"`
-	Condition  string `json:"condition"`
-	Message    string `json:"message"`
+	JiaIsuUUID     string `json:"jia_isu_uuid"`
+	Timestamp      int64  `json:"timestamp"`
+	IsSitting      bool   `json:"is_sitting"`
+	Condition      string `json:"condition"`
+	Message        string `json:"message"`
+	ConditionLevel string `json:"condition_level"`
 }
 
 var postIsuConditionRequests []PostIsuConditionRequests
@@ -1275,12 +1276,18 @@ func postIsuCondition(c echo.Context) error {
 	}
 
 	for _, r := range req {
+		conditionLevel, err := calculateConditionLevel(r.Condition)
+		if err != nil {
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
 		appendRequest := PostIsuConditionRequests{
-			JiaIsuUUID: jiaIsuUUID,
-			Timestamp:  r.Timestamp,
-			IsSitting:  r.IsSitting,
-			Condition:  r.Condition,
-			Message:    r.Message,
+			JiaIsuUUID:     jiaIsuUUID,
+			Timestamp:      r.Timestamp,
+			IsSitting:      r.IsSitting,
+			Condition:      r.Condition,
+			ConditionLevel: conditionLevel,
+			Message:        r.Message,
 		}
 		postIsuConditionRequests = append(postIsuConditionRequests, appendRequest)
 	}
