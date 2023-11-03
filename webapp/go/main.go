@@ -16,7 +16,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -276,6 +275,39 @@ func main() {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
 	}
+
+	ticker := time.NewTicker(1000 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case _ = <-ticker.C:
+				doRequest := postIsuConditionRequests
+				postIsuConditionRequests = []PostIsuConditionRequests{}
+				args := make([]interface{}, 0, len(doRequest)*5)
+
+				query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
+				for i, cond := range doRequest {
+					timestamp := time.Unix(cond.Timestamp, 0)
+
+					if i > 0 {
+						query += ", "
+					}
+					query += "(?, ?, ?, ?, ?)"
+					args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
+					isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
+				}
+				// default: tx
+				if _, err = db.Exec(query, args...); err != nil {
+					fmt.Println("POST DB error: %v", err)
+				}
+				//err = tx.Commit()
+				//if err != nil {
+				//	c.Logger().Errorf("db error: %v", err)
+				//	return c.NoContent(http.StatusInternalServerError)
+				//}
+			}
+		}
+	}()
 
 	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
 	e.Logger.Fatal(e.Start(serverPort))
@@ -1198,10 +1230,6 @@ type PostIsuConditionRequests struct {
 }
 
 var postIsuConditionRequests []PostIsuConditionRequests
-var nextTime time.Time
-var nextTimeMutex sync.Mutex
-
-const nextTimeConst = time.Second * 1
 
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
@@ -1256,43 +1284,8 @@ func postIsuCondition(c echo.Context) error {
 		}
 		postIsuConditionRequests = append(postIsuConditionRequests, appendRequest)
 	}
-	args := make([]interface{}, 0, len(postIsuConditionRequests)*5)
 
-	if nextTimeMutex.TryLock() && nextTime.Before(time.Now()) {
-		fmt.Println("Exec ikimasu")
-		nextTime = time.Now().Add(nextTimeConst)
-		doRequest := postIsuConditionRequests
-		postIsuConditionRequests = []PostIsuConditionRequests{}
-
-		query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
-		for i, cond := range doRequest {
-			timestamp := time.Unix(cond.Timestamp, 0)
-
-			if i > 0 {
-				query += ", "
-			}
-			query += "(?, ?, ?, ?, ?)"
-			args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
-		}
-		// default: tx
-		if _, err := db.Exec(query, args...); err != nil {
-			c.Logger().Errorf("db error: %v", err)
-			nextTimeMutex.Unlock()
-			return c.NoContent(http.StatusInternalServerError)
-		}
-		//err = tx.Commit()
-		//if err != nil {
-		//	c.Logger().Errorf("db error: %v", err)
-		//	return c.NoContent(http.StatusInternalServerError)
-		//}
-
-		isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
-		nextTimeMutex.Unlock()
-		return c.NoContent(http.StatusAccepted)
-	} else {
-		fmt.Println("lock saretetayo...")
-		return c.NoContent(http.StatusAccepted)
-	}
+	return c.NoContent(http.StatusAccepted)
 }
 
 // ISUのコンディションの文字列がcsv形式になっているか検証
