@@ -1064,7 +1064,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 		// 	jiaIsuUUID, endTime, startTime, limit,
 		// )
 		for i := range allConditions {
-			if allConditions[i].Timestamp.Before(endTime) && allConditions[i].Timestamp.After(startTime) {
+			if allConditions[i].Timestamp.Before(endTime) && (allConditions[i].Timestamp.After(startTime) || allConditions[i].Timestamp.Equal(startTime)) {
 				conditions = append(conditions, allConditions[i])
 			}
 		}
