@@ -367,7 +367,7 @@ func updateTrend() {
 		sort.Slice(characterCriticalIsuConditions, func(i, j int) bool {
 			return characterCriticalIsuConditions[i].Timestamp > characterCriticalIsuConditions[j].Timestamp
 		})
-		trendResponse = append(res,
+		res = append(res,
 			TrendResponse{
 				Character: character,
 				Info:      characterInfoIsuConditions,
@@ -375,6 +375,8 @@ func updateTrend() {
 				Critical:  characterCriticalIsuConditions,
 			})
 	}
+
+	trendResponse = res
 }
 
 func main() {
