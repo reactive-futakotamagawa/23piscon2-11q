@@ -1341,76 +1341,10 @@ var trendResponse []TrendResponse
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
-	var isuList []Isu
-	isuList = isuCache.GetAll()
+	isuList := isuCache.GetAll()
 	if len(isuList) == 0 || isuList == nil {
-		err := db.Select(&isuList, "SELECT * FROM `isu`")
-		if errors.Is(err, sql.ErrNoRows) {
-			fmt.Println("no rows tickerGetTrend")
-			return err
-		}
-		if err != nil {
-			fmt.Printf("db error: %v", err)
-			return err
-		}
-		isuCache.Set(isuList)
+		updateTrend()
 	}
-	characterIsuMap := map[string][]Isu{}
-	for _, isu := range isuList {
-		characterIsuMap[isu.Character] = append(characterIsuMap[isu.Character], isu)
-	}
-
-	var res []TrendResponse
-
-	for character, isuLists := range characterIsuMap {
-		var characterInfoIsuConditions []*TrendCondition
-		var characterWarningIsuConditions []*TrendCondition
-		var characterCriticalIsuConditions []*TrendCondition
-		for _, isu := range isuLists {
-			isuLastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			if err != nil {
-				fmt.Printf("db error: %v", err)
-				return err
-			}
-
-			conditionLevel := isuLastCondition.ConditionLevel
-			trendCondition := TrendCondition{
-				ID:        isu.ID,
-				Timestamp: isuLastCondition.Timestamp.Unix(),
-			}
-			switch conditionLevel {
-			case "info":
-				characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
-			case "warning":
-				characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
-			case "critical":
-				characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
-			}
-
-		}
-
-		sort.Slice(characterInfoIsuConditions, func(i, j int) bool {
-			return characterInfoIsuConditions[i].Timestamp > characterInfoIsuConditions[j].Timestamp
-		})
-		sort.Slice(characterWarningIsuConditions, func(i, j int) bool {
-			return characterWarningIsuConditions[i].Timestamp > characterWarningIsuConditions[j].Timestamp
-		})
-		sort.Slice(characterCriticalIsuConditions, func(i, j int) bool {
-			return characterCriticalIsuConditions[i].Timestamp > characterCriticalIsuConditions[j].Timestamp
-		})
-		res = append(res,
-			TrendResponse{
-				Character: character,
-				Info:      characterInfoIsuConditions,
-				Warning:   characterWarningIsuConditions,
-				Critical:  characterCriticalIsuConditions,
-			})
-	}
-
-	trendResponse = res
 	return c.JSON(http.StatusOK, trendResponse)
 }
 
