@@ -1197,6 +1197,7 @@ type PostIsuConditionRequests struct {
 }
 
 var postIsuConditionRequests []PostIsuConditionRequests
+var nextTime time.Time
 
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
@@ -1220,6 +1221,22 @@ func postIsuCondition(c echo.Context) error {
 	} else if len(req) == 0 {
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
+	//tx, err := db.Beginx()
+	//if err != nil {
+	//	c.Logger().Errorf("db error: %v", err)
+	//	return c.NoContent(http.StatusInternalServerError)
+	//}
+	//defer tx.Rollback()
+	var count int
+	// default: tx
+	err = db.Get(&count, "SELECT COUNT(id) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	if count == 0 {
+		return c.String(http.StatusNotFound, "not found: isu")
+	}
 
 	for _, r := range req {
 		appendRequest := PostIsuConditionRequests{
@@ -1231,53 +1248,43 @@ func postIsuCondition(c echo.Context) error {
 		}
 		postIsuConditionRequests = append(postIsuConditionRequests, appendRequest)
 	}
+	args := make([]interface{}, 0, len(postIsuConditionRequests)*5)
 
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
+	if nextTime.Before(time.Now()) {
+		nextTime = time.Now().Add(time.Second * 1)
+		doRequest := postIsuConditionRequests
+		postIsuConditionRequests = []PostIsuConditionRequests{}
 
-	var count int
-	err = tx.Get(&count, "SELECT COUNT(id) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	if count == 0 {
-		return c.String(http.StatusNotFound, "not found: isu")
-	}
+		query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
+		for i, cond := range doRequest {
+			timestamp := time.Unix(cond.Timestamp, 0)
 
-	args := make([]interface{}, 0, len(req)*5)
-	query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
-	for i, cond := range req {
-		timestamp := time.Unix(cond.Timestamp, 0)
+			if !isValidConditionFormat(cond.Condition) {
+				return c.String(http.StatusBadRequest, "bad request body")
+			}
 
-		if !isValidConditionFormat(cond.Condition) {
-			return c.String(http.StatusBadRequest, "bad request body")
+			if i > 0 {
+				query += ", "
+			}
+			query += "(?, ?, ?, ?, ?)"
+			args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
 		}
-
-		if i > 0 {
-			query += ", "
+		// default: tx
+		if _, err := db.Exec(query, args...); err != nil {
+			c.Logger().Errorf("db error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
 		}
-		query += "(?, ?, ?, ?, ?)"
-		args = append(args, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
-	}
-	if _, err := tx.Exec(query, args...); err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+		//err = tx.Commit()
+		//if err != nil {
+		//	c.Logger().Errorf("db error: %v", err)
+		//	return c.NoContent(http.StatusInternalServerError)
+		//}
 
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
+		isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
+		return c.NoContent(http.StatusAccepted)
+	} else {
+		return c.NoContent(http.StatusAccepted)
 	}
-
-	isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
-
-	return c.NoContent(http.StatusAccepted)
 }
 
 // ISUのコンディションの文字列がcsv形式になっているか検証
