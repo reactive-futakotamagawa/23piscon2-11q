@@ -1339,6 +1339,10 @@ var trendResponse []TrendResponse
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
+	isuList := isuCache.GetAll()
+	if len(isuList) == 0 || isuList == nil {
+		updateTrend()
+	}
 	return c.JSON(http.StatusOK, trendResponse)
 }
 
