@@ -307,13 +307,14 @@ func main() {
 						Condition:  a.Condition,
 						Message:    a.Message,
 					})
-					fmt.Printf("count: %d", len(args))
-					_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", args)
-					// default: tx
-					if err != nil {
-						fmt.Printf("POST DB error: %v\n", err)
-					}
 				}
+				fmt.Printf("count: %d", len(args))
+				_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", args)
+				// default: tx
+				if err != nil {
+					fmt.Printf("POST DB error: %v\n", err)
+				}
+
 			}
 		}
 	}()
