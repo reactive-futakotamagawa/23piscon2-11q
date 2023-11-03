@@ -1213,13 +1213,17 @@ func postIsuCondition(c echo.Context) error {
 	if jiaIsuUUID == "" {
 		return c.String(http.StatusBadRequest, "missing: jia_isu_uuid")
 	}
-
 	var req []PostIsuConditionRequest
 	err := c.Bind(&req)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "bad request body")
 	} else if len(req) == 0 {
 		return c.String(http.StatusBadRequest, "bad request body")
+	}
+	for _, cond := range req {
+		if !isValidConditionFormat(cond.Condition) {
+			return c.String(http.StatusBadRequest, "bad request body")
+		}
 	}
 	//tx, err := db.Beginx()
 	//if err != nil {
@@ -1229,7 +1233,7 @@ func postIsuCondition(c echo.Context) error {
 	//defer tx.Rollback()
 	var count int
 	// default: tx
-	err = db.Get(&count, "SELECT COUNT(id) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	err = db.Get(&count, "SELECT COUNT(1) FROM `isu` WHERE `jia_isu_uuid` = ? LIMIT 1", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1258,10 +1262,6 @@ func postIsuCondition(c echo.Context) error {
 		query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
 		for i, cond := range doRequest {
 			timestamp := time.Unix(cond.Timestamp, 0)
-
-			if !isValidConditionFormat(cond.Condition) {
-				return c.String(http.StatusBadRequest, "bad request body")
-			}
 
 			if i > 0 {
 				query += ", "
