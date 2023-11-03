@@ -1259,7 +1259,6 @@ func postIsuCondition(c echo.Context) error {
 	args := make([]interface{}, 0, len(postIsuConditionRequests)*5)
 
 	if nextTimeMutex.TryLock() && nextTime.Before(time.Now()) {
-		nextTimeMutex.Lock()
 		nextTime = time.Now().Add(nextTimeConst)
 		doRequest := postIsuConditionRequests
 		postIsuConditionRequests = []PostIsuConditionRequests{}
@@ -1277,6 +1276,7 @@ func postIsuCondition(c echo.Context) error {
 		// default: tx
 		if _, err := db.Exec(query, args...); err != nil {
 			c.Logger().Errorf("db error: %v", err)
+			nextTimeMutex.Unlock()
 			return c.NoContent(http.StatusInternalServerError)
 		}
 		//err = tx.Commit()
