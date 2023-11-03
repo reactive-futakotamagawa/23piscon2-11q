@@ -343,7 +343,6 @@ func updateTrend() {
 			}
 
 			conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
-			fmt.Println(conditionLevel, isuLastCondition.ConditionLevel)
 			trendCondition := TrendCondition{
 				ID:        isu.ID,
 				Timestamp: isuLastCondition.Timestamp.Unix(),
@@ -452,7 +451,6 @@ func main() {
 		for {
 			select {
 			case _ = <-tickerGetTrend.C:
-				fmt.Println("updated by time")
 				updateTrend()
 			}
 		}
@@ -1343,10 +1341,9 @@ var trendResponse []TrendResponse
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
-	fmt.Println("getTrend")
 	if len(trendResponse) == 0 {
 		updateTrend()
-		fmt.Println("updated")
+		fmt.Println("manually update trend")
 	}
 	return c.JSON(http.StatusOK, trendResponse)
 }
