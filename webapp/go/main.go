@@ -280,31 +280,14 @@ func main() {
 	go func() {
 		for {
 			select {
-			case _ = <-ticker.C:
+			case <-ticker.C:
 				doRequest := postIsuConditionRequests
-				postIsuConditionRequests = []PostIsuConditionRequests{}
-				args := make([]interface{}, 0, len(doRequest)*5)
-
-				query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES "
-				for i, cond := range doRequest {
-					timestamp := time.Unix(cond.Timestamp, 0)
-
-					if i > 0 {
-						query += ", "
-					}
-					query += "(?, ?, ?, ?, ?)"
-					args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
-					isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
-				}
+				postIsuConditionRequests = make([]PostIsuConditionRequests, 0, 1000)
+				_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", doRequest)
 				// default: tx
-				if _, err = db.Exec(query, args...); err != nil {
-					fmt.Println("POST DB error: %v", err)
+				if err != nil {
+					fmt.Printf("POST DB error: %v\n", err)
 				}
-				//err = tx.Commit()
-				//if err != nil {
-				//	c.Logger().Errorf("db error: %v", err)
-				//	return c.NoContent(http.StatusInternalServerError)
-				//}
 			}
 		}
 	}()
@@ -1222,11 +1205,11 @@ func getTrend(c echo.Context) error {
 }
 
 type PostIsuConditionRequests struct {
-	JiaIsuUUID string `json:"jia_isu_uuid"`
-	Timestamp  int64  `json:"timestamp"`
-	IsSitting  bool   `json:"is_sitting"`
-	Condition  string `json:"condition"`
-	Message    string `json:"message"`
+	JiaIsuUUID string `json:"jia_isu_uuid" db:"jia_isu_uuid"`
+	Timestamp  int64  `json:"timestamp" db:"timestamp"`
+	IsSitting  bool   `json:"is_sitting" db:"is_sitting"`
+	Condition  string `json:"condition" db:"condition"`
+	Message    string `json:"message" db:"message"`
 }
 
 var postIsuConditionRequests []PostIsuConditionRequests
