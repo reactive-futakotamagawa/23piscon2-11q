@@ -1341,17 +1341,13 @@ var trendResponse []TrendResponse
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
-	var isuList []Isu
+	isuList := []Isu{}
 	isuList = isuCache.GetAll()
 	if len(isuList) == 0 || isuList == nil {
 		err := db.Select(&isuList, "SELECT * FROM `isu`")
-		if errors.Is(err, sql.ErrNoRows) {
-			fmt.Println("no rows tickerGetTrend")
-			return err
-		}
 		if err != nil {
-			fmt.Printf("db error: %v", err)
-			return err
+			c.Logger().Errorf("db error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
 		}
 		isuCache.Set(isuList)
 	}
@@ -1360,23 +1356,32 @@ func getTrend(c echo.Context) error {
 		characterIsuMap[isu.Character] = append(characterIsuMap[isu.Character], isu)
 	}
 
-	var res []TrendResponse
+	res := []TrendResponse{}
 
-	for character, isuLists := range characterIsuMap {
-		var characterInfoIsuConditions []*TrendCondition
-		var characterWarningIsuConditions []*TrendCondition
-		var characterCriticalIsuConditions []*TrendCondition
-		for _, isu := range isuLists {
+	for character, isuList := range characterIsuMap {
+		characterInfoIsuConditions := []*TrendCondition{}
+		characterWarningIsuConditions := []*TrendCondition{}
+		characterCriticalIsuConditions := []*TrendCondition{}
+		for _, isu := range isuList {
+			// conditions := []IsuCondition{}
+			// err = db.Select(&conditions,
+			// 	"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC",
+			// 	isu.JIAIsuUUID,
+			// )
 			isuLastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
 			}
 			if err != nil {
-				fmt.Printf("db error: %v", err)
-				return err
+				c.Logger().Errorf("db error: %v", err)
+				return c.NoContent(http.StatusInternalServerError)
 			}
 
-			conditionLevel := isuLastCondition.ConditionLevel
+			conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
+			if err != nil {
+				c.Logger().Error(err)
+				return c.NoContent(http.StatusInternalServerError)
+			}
 			trendCondition := TrendCondition{
 				ID:        isu.ID,
 				Timestamp: isuLastCondition.Timestamp.Unix(),
@@ -1410,8 +1415,7 @@ func getTrend(c echo.Context) error {
 			})
 	}
 
-	trendResponse = res
-	return c.JSON(http.StatusOK, trendResponse)
+	return c.JSON(http.StatusOK, res)
 }
 
 type PostIsuConditionRequests struct {
