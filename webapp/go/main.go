@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"database/sql"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +26,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	"github.com/motoki317/sc"
 )
 
 const (
@@ -206,6 +209,17 @@ func init() {
 	}
 }
 
+var isuConditionCacheByIsuUUID *sc.Cache[string, []IsuCondition]
+
+func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) ([]IsuCondition, error) {
+	var conditions []IsuCondition
+	err := db.Select(&conditions, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", isuUUID)
+	if err != nil {
+		return nil, err
+	}
+	return conditions, nil
+}
+
 func main() {
 	go standalone.Integrate(":8888")
 
@@ -254,6 +268,8 @@ func main() {
 		e.Logger.Fatalf("missing: POST_ISUCONDITION_TARGET_BASE_URL")
 		return
 	}
+
+	isuConditionCacheByIsuUUID, err = sc.New[string, []IsuCondition](getIsuConditionsByIsuUUID, time.Minute, time.Minute)
 
 	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
 	e.Logger.Fatal(e.Start(serverPort))
@@ -1095,31 +1111,41 @@ func getTrend(c echo.Context) error {
 	res := []TrendResponse{}
 
 	for _, character := range characterList {
-		characterInfoIsuConditions := []*TrendCondition{}
-		characterWarningIsuConditions := []*TrendCondition{}
-		characterCriticalIsuConditions := []*TrendCondition{}
-
-		var conditions []struct {
-			IsuID int `db:"isuID"`
-			IsuCondition
-		}
-		err = db.Select(&conditions, "SELECT `isu`.`id` AS isuID, `isu_condition`.* FROM `isu` JOIN `isu_condition` ON `isu`.`jia_isu_uuid` = `isu_condition`.`jia_isu_uuid` WHERE `isu`.`character` = ? ORDER BY `isu_condition`.`timestamp` DESC", character.Character)
+		isuList := []Isu{}
+		err = db.Select(&isuList,
+			"SELECT * FROM `isu` WHERE `character` = ?",
+			character.Character,
+		)
 		if err != nil {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
-		isuConditionLevelMap := make(map[int]struct{})
-		for i := range conditions {
-			//最新のコンディションをisuのコンディションとする。
-			if _, ok := isuConditionLevelMap[conditions[i].IsuID]; !ok {
-				trendCondition := TrendCondition{
-					ID:        conditions[i].IsuID,
-					Timestamp: conditions[i].Timestamp.Unix(),
-				}
-				conditionLevel, err := calculateConditionLevel(conditions[i].Condition)
+
+		characterInfoIsuConditions := []*TrendCondition{}
+		characterWarningIsuConditions := []*TrendCondition{}
+		characterCriticalIsuConditions := []*TrendCondition{}
+		for _, isu := range isuList {
+			// conditions := []IsuCondition{}
+			// err = db.Select(&conditions,
+			// 	"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC",
+			// 	isu.JIAIsuUUID,
+			// )
+			conditions, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+			if err != nil {
+				c.Logger().Errorf("db error: %v", err)
+				return c.NoContent(http.StatusInternalServerError)
+			}
+
+			if len(conditions) > 0 {
+				isuLastCondition := conditions[0]
+				conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
 				if err != nil {
 					c.Logger().Error(err)
 					return c.NoContent(http.StatusInternalServerError)
+				}
+				trendCondition := TrendCondition{
+					ID:        isu.ID,
+					Timestamp: isuLastCondition.Timestamp.Unix(),
 				}
 				switch conditionLevel {
 				case "info":
@@ -1129,20 +1155,19 @@ func getTrend(c echo.Context) error {
 				case "critical":
 					characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
 				}
-				isuConditionLevelMap[conditions[i].IsuID] = struct{}{}
 			}
 
 		}
 
-		// sort.Slice(characterInfoIsuConditions, func(i, j int) bool {
-		// 	return characterInfoIsuConditions[i].Timestamp > characterInfoIsuConditions[j].Timestamp
-		// })
-		// sort.Slice(characterWarningIsuConditions, func(i, j int) bool {
-		// 	return characterWarningIsuConditions[i].Timestamp > characterWarningIsuConditions[j].Timestamp
-		// })
-		// sort.Slice(characterCriticalIsuConditions, func(i, j int) bool {
-		// 	return characterCriticalIsuConditions[i].Timestamp > characterCriticalIsuConditions[j].Timestamp
-		// })
+		sort.Slice(characterInfoIsuConditions, func(i, j int) bool {
+			return characterInfoIsuConditions[i].Timestamp > characterInfoIsuConditions[j].Timestamp
+		})
+		sort.Slice(characterWarningIsuConditions, func(i, j int) bool {
+			return characterWarningIsuConditions[i].Timestamp > characterWarningIsuConditions[j].Timestamp
+		})
+		sort.Slice(characterCriticalIsuConditions, func(i, j int) bool {
+			return characterCriticalIsuConditions[i].Timestamp > characterCriticalIsuConditions[j].Timestamp
+		})
 		res = append(res,
 			TrendResponse{
 				Character: character.Character,
