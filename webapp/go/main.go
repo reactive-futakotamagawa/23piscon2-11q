@@ -209,17 +209,16 @@ func init() {
 	}
 }
 
-// SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC
-// ASCであることに注意
-var isuConditionCacheByIsuUUID *sc.Cache[string, []IsuCondition]
+// SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1
+var isuConditionCacheByIsuUUID *sc.Cache[string, *IsuCondition]
 
-func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) ([]IsuCondition, error) {
-	var conditions []IsuCondition
-	err := db.Select(&conditions, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", isuUUID)
+func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition, error) {
+	var condition IsuCondition
+	err := db.Get(&condition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isuUUID)
 	if err != nil {
 		return nil, err
 	}
-	return conditions, nil
+	return &condition, nil
 }
 
 func main() {
@@ -271,7 +270,11 @@ func main() {
 		return
 	}
 
-	isuConditionCacheByIsuUUID, err = sc.New[string, []IsuCondition](getIsuConditionsByIsuUUID, time.Minute, time.Minute)
+	isuConditionCacheByIsuUUID, err = sc.New[string, *IsuCondition](getIsuConditionsByIsuUUID, time.Minute, time.Minute)
+	if err != nil {
+		e.Logger.Fatalf("failed to create cache: %v", err)
+		return
+	}
 
 	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
 	e.Logger.Fatal(e.Start(serverPort))
@@ -499,11 +502,11 @@ func getIsuList(c echo.Context) error {
 
 	responseList := []GetIsuListResponse{}
 	for _, isu := range isuList {
-		var lastCondition IsuCondition
+		var lastCondition *IsuCondition
 		foundLastCondition := true
 		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
 		// 	isu.JIAIsuUUID)
-		conditions, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+		lastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				foundLastCondition = false
@@ -512,7 +515,6 @@ func getIsuList(c echo.Context) error {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 		}
-		lastCondition = conditions[len(conditions)-1]
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {
@@ -1136,31 +1138,31 @@ func getTrend(c echo.Context) error {
 			// 	"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC",
 			// 	isu.JIAIsuUUID,
 			// )
-			conditions, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+			isuLastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
 			if err != nil {
 				c.Logger().Errorf("db error: %v", err)
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
-			if len(conditions) > 0 {
-				isuLastCondition := conditions[len(conditions)-1]
-				conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
-				if err != nil {
-					c.Logger().Error(err)
-					return c.NoContent(http.StatusInternalServerError)
-				}
-				trendCondition := TrendCondition{
-					ID:        isu.ID,
-					Timestamp: isuLastCondition.Timestamp.Unix(),
-				}
-				switch conditionLevel {
-				case "info":
-					characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
-				case "warning":
-					characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
-				case "critical":
-					characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
-				}
+			conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
+			if err != nil {
+				c.Logger().Error(err)
+				return c.NoContent(http.StatusInternalServerError)
+			}
+			trendCondition := TrendCondition{
+				ID:        isu.ID,
+				Timestamp: isuLastCondition.Timestamp.Unix(),
+			}
+			switch conditionLevel {
+			case "info":
+				characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
+			case "warning":
+				characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
+			case "critical":
+				characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
 			}
 
 		}
