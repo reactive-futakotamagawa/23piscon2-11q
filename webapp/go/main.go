@@ -221,6 +221,14 @@ func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition
 	return &condition, nil
 }
 
+type bulkInsertArgs struct {
+	JIAIsuUUID string    `db:"jia_isu_uuid"`
+	Timestamp  time.Time `db:"timestamp"`
+	IsSitting  bool      `db:"is_sitting"`
+	Condition  string    `db:"condition"`
+	Message    string    `db:"message"`
+}
+
 func main() {
 	go standalone.Integrate(":8888")
 
@@ -281,12 +289,29 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				doRequest := postIsuConditionRequests
+				reqs := make([]PostIsuConditionRequests, len(postIsuConditionRequests))
+				copy(reqs, postIsuConditionRequests)
 				postIsuConditionRequests = make([]PostIsuConditionRequests, 0, 1000)
-				_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", doRequest)
-				// default: tx
-				if err != nil {
-					fmt.Printf("POST DB error: %v\n", err)
+				// doRequest := postIsuConditionRequests
+
+				if len(reqs) == 0 {
+					continue
+				}
+
+				args := make([]bulkInsertArgs, 0, len(reqs))
+				for _, a := range reqs {
+					args = append(args, bulkInsertArgs{
+						JIAIsuUUID: a.JiaIsuUUID,
+						Timestamp:  time.Unix(a.Timestamp, 0),
+						IsSitting:  a.IsSitting,
+						Condition:  a.Condition,
+						Message:    a.Message,
+					})
+					_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", args)
+					// default: tx
+					if err != nil {
+						fmt.Printf("POST DB error: %v\n", err)
+					}
 				}
 			}
 		}
