@@ -338,6 +338,8 @@ func main() {
 						Message:        cond.Message,
 						ConditionLevel: cond.ConditionLevel,
 					})
+
+					isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
 				}
 
 				_, err = db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message, :condition_level)", args)
