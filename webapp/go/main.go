@@ -258,6 +258,54 @@ func (c *IsuCache) GetAll() []Isu {
 	return isu
 }
 
+func doPostIsuCondition() {
+	if len(postIsuConditionRequests) == 0 {
+		return
+	}
+	doRequest := make([]PostIsuConditionRequests, len(postIsuConditionRequests))
+	copy(doRequest, postIsuConditionRequests)
+	postIsuConditionRequests = []PostIsuConditionRequests{}
+	args := make([]BulkInsertArg, 0, len(doRequest))
+	for _, cond := range doRequest {
+		timestamp := time.Unix(cond.Timestamp, 0)
+		args = append(args, BulkInsertArg{
+			JiaIsuUUID:     cond.JiaIsuUUID,
+			Timestamp:      timestamp,
+			IsSitting:      cond.IsSitting,
+			Condition:      cond.Condition,
+			Message:        cond.Message,
+			ConditionLevel: cond.ConditionLevel,
+		})
+
+		isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
+	}
+
+	_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message, :condition_level)", args)
+	if err != nil {
+		fmt.Printf("db error: %v", err)
+	}
+	// query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
+	// for i, cond := range doRequest {
+	// 	timestamp := time.Unix(cond.Timestamp, 0)
+
+	// 	if i > 0 {
+	// 		query += ", "
+	// 	}
+	// 	query += "(?, ?, ?, ?, ?, ?)"
+	// 	args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.ConditionLevel)
+	// 	isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
+	// }
+	// default: tx
+	// if _, err = db.Exec(query, args...); err != nil {
+	// 	// fmt.Println("POST DB error: %v", err)
+	// }
+	//err = tx.Commit()
+	//if err != nil {
+	//	c.Logger().Errorf("db error: %v", err)
+	//	return c.NoContent(http.StatusInternalServerError)
+	//}
+}
+
 func updateTrend() {
 	var isuList []Isu
 	isuList = isuCache.GetAll()
@@ -328,6 +376,7 @@ func updateTrend() {
 			})
 	}
 }
+
 func main() {
 	go standalone.Integrate(":8888")
 
@@ -390,51 +439,7 @@ func main() {
 		for {
 			select {
 			case _ = <-tickerPostIsuCondition.C:
-				if len(postIsuConditionRequests) == 0 {
-					continue
-				}
-				doRequest := make([]PostIsuConditionRequests, len(postIsuConditionRequests))
-				copy(doRequest, postIsuConditionRequests)
-				postIsuConditionRequests = []PostIsuConditionRequests{}
-				args := make([]BulkInsertArg, 0, len(doRequest))
-				for _, cond := range doRequest {
-					timestamp := time.Unix(cond.Timestamp, 0)
-					args = append(args, BulkInsertArg{
-						JiaIsuUUID:     cond.JiaIsuUUID,
-						Timestamp:      timestamp,
-						IsSitting:      cond.IsSitting,
-						Condition:      cond.Condition,
-						Message:        cond.Message,
-						ConditionLevel: cond.ConditionLevel,
-					})
-
-					isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
-				}
-
-				_, err = db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message, :condition_level)", args)
-				if err != nil {
-					e.Logger.Errorf("db error: %v", err)
-				}
-				// query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
-				// for i, cond := range doRequest {
-				// 	timestamp := time.Unix(cond.Timestamp, 0)
-
-				// 	if i > 0 {
-				// 		query += ", "
-				// 	}
-				// 	query += "(?, ?, ?, ?, ?, ?)"
-				// 	args = append(args, cond.JiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.ConditionLevel)
-				// 	isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
-				// }
-				// default: tx
-				// if _, err = db.Exec(query, args...); err != nil {
-				// 	// fmt.Println("POST DB error: %v", err)
-				// }
-				//err = tx.Commit()
-				//if err != nil {
-				//	c.Logger().Errorf("db error: %v", err)
-				//	return c.NoContent(http.StatusInternalServerError)
-				//}
+				doPostIsuCondition()
 			}
 		}
 	}()
