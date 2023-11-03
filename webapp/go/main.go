@@ -1108,8 +1108,8 @@ func getTrend(c echo.Context) error {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
+		isuConditionLevelMap := make(map[int]string)
 		for i := range conditions {
-			conditionLevel, err := calculateConditionLevel(conditions[i].Condition)
 			if err != nil {
 				c.Logger().Error(err)
 				return c.NoContent(http.StatusInternalServerError)
@@ -1118,7 +1118,16 @@ func getTrend(c echo.Context) error {
 				ID:        conditions[i].IsuID,
 				Timestamp: conditions[i].Timestamp.Unix(),
 			}
-			switch conditionLevel {
+			//最新のコンディションをisuのコンディションとする。
+			if _, ok := isuConditionLevelMap[conditions[i].IsuID]; !ok {
+				conditionLevel, err := calculateConditionLevel(conditions[i].Condition)
+				if err != nil {
+					c.Logger().Error(err)
+					return c.NoContent(http.StatusInternalServerError)
+				}
+				isuConditionLevelMap[conditions[i].IsuID] = conditionLevel
+			}
+			switch isuConditionLevelMap[conditions[i].IsuID] {
 			case "info":
 				characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
 			case "warning":
