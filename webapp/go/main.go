@@ -355,6 +355,8 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	isuConditionCacheByIsuUUID.Purge()
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
@@ -1137,7 +1139,7 @@ func getTrend(c echo.Context) error {
 			}
 
 			if len(conditions) > 0 {
-				isuLastCondition := conditions[0]
+				isuLastCondition := conditions[len(conditions)-1]
 				conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
 				if err != nil {
 					c.Logger().Error(err)
@@ -1245,6 +1247,8 @@ func postIsuCondition(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
 
 	return c.NoContent(http.StatusAccepted)
 }
