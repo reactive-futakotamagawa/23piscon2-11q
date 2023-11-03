@@ -293,7 +293,10 @@ func main() {
 		for {
 			select {
 			case _ = <-ticker.C:
-				doRequest := make([]PostIsuConditionRequests, 0, len(postIsuConditionRequests))
+				if len(postIsuConditionRequests) == 0 {
+					continue
+				}
+				doRequest := make([]PostIsuConditionRequests, len(postIsuConditionRequests))
 				copy(doRequest, postIsuConditionRequests)
 				postIsuConditionRequests = []PostIsuConditionRequests{}
 				args := make([]BulkInsertArg, 0, len(doRequest))
