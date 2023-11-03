@@ -309,7 +309,7 @@ func main() {
 				}
 				// default: tx
 				if _, err = db.Exec(query, args...); err != nil {
-					fmt.Println("POST DB error: %v", err)
+					// fmt.Println("POST DB error: %v", err)
 				}
 				//err = tx.Commit()
 				//if err != nil {
