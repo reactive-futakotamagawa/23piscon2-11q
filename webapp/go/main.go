@@ -209,16 +209,16 @@ func init() {
 	}
 }
 
-// SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1
-var isuConditionCacheByIsuUUID *sc.Cache[string, *IsuCondition]
+// SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC
+var isuConditionsCacheByIsuUUID *sc.Cache[string, []IsuCondition]
 
-func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition, error) {
-	var condition IsuCondition
-	err := db.Get(&condition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isuUUID)
+func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) ([]IsuCondition, error) {
+	var conditions []IsuCondition
+	err := db.Select(&conditions, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isuUUID)
 	if err != nil {
 		return nil, err
 	}
-	return &condition, nil
+	return conditions, nil
 }
 
 func main() {
@@ -270,7 +270,7 @@ func main() {
 		return
 	}
 
-	isuConditionCacheByIsuUUID, err = sc.New[string, *IsuCondition](getIsuConditionsByIsuUUID, time.Minute, time.Minute)
+	isuConditionsCacheByIsuUUID, err = sc.New[string, []IsuCondition](getIsuConditionsByIsuUUID, time.Minute, time.Minute)
 	if err != nil {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
@@ -360,7 +360,7 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	isuConditionCacheByIsuUUID.Purge()
+	isuConditionsCacheByIsuUUID.Purge()
 
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
@@ -502,11 +502,11 @@ func getIsuList(c echo.Context) error {
 
 	responseList := []GetIsuListResponse{}
 	for _, isu := range isuList {
-		var lastCondition *IsuCondition
+		var lastCondition IsuCondition
 		foundLastCondition := true
 		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
 		// 	isu.JIAIsuUUID)
-		lastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+		conditions, err := isuConditionsCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				foundLastCondition = false
@@ -518,6 +518,7 @@ func getIsuList(c echo.Context) error {
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {
+			lastCondition = conditions[0]
 			conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
 			if err != nil {
 				c.Logger().Error(err)
@@ -1138,7 +1139,7 @@ func getTrend(c echo.Context) error {
 			// 	"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC",
 			// 	isu.JIAIsuUUID,
 			// )
-			isuLastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+			isuConditions, err := isuConditionsCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
 			}
@@ -1147,6 +1148,7 @@ func getTrend(c echo.Context) error {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
+			isuLastCondition := isuConditions[0]
 			conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
 			if err != nil {
 				c.Logger().Error(err)
@@ -1254,7 +1256,7 @@ func postIsuCondition(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
+	isuConditionsCacheByIsuUUID.Forget(jiaIsuUUID)
 
 	return c.NoContent(http.StatusAccepted)
 }
