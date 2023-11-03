@@ -209,6 +209,8 @@ func init() {
 	}
 }
 
+// SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC
+// ASCであることに注意
 var isuConditionCacheByIsuUUID *sc.Cache[string, []IsuCondition]
 
 func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) ([]IsuCondition, error) {
@@ -499,8 +501,10 @@ func getIsuList(c echo.Context) error {
 	for _, isu := range isuList {
 		var lastCondition IsuCondition
 		foundLastCondition := true
-		err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-			isu.JIAIsuUUID)
+		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+		// 	isu.JIAIsuUUID)
+		conditions, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+		lastCondition = conditions[len(conditions)-1]
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				foundLastCondition = false
