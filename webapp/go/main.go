@@ -1259,6 +1259,7 @@ func postIsuCondition(c echo.Context) error {
 	args := make([]interface{}, 0, len(postIsuConditionRequests)*5)
 
 	if nextTimeMutex.TryLock() && nextTime.Before(time.Now()) {
+		fmt.Println("Exec ikimasu")
 		nextTime = time.Now().Add(nextTimeConst)
 		doRequest := postIsuConditionRequests
 		postIsuConditionRequests = []PostIsuConditionRequests{}
@@ -1289,6 +1290,7 @@ func postIsuCondition(c echo.Context) error {
 		nextTimeMutex.Unlock()
 		return c.NoContent(http.StatusAccepted)
 	} else {
+		fmt.Println("lock saretetayo...")
 		return c.NoContent(http.StatusAccepted)
 	}
 }
