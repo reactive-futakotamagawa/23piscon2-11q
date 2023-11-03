@@ -441,7 +441,7 @@ func main() {
 
 	isuCache = IsuCache{Isu: make(map[string]Isu)}
 
-	tickerPostIsuCondition := time.NewTicker(2000 * time.Millisecond)
+	tickerPostIsuCondition := time.NewTicker(750 * time.Millisecond)
 	go func() {
 		for {
 			select {
@@ -451,7 +451,7 @@ func main() {
 		}
 	}()
 
-	tickerGetTrend := time.NewTicker(1000 * time.Millisecond)
+	tickerGetTrend := time.NewTicker(100 * time.Millisecond)
 	go func() {
 		for {
 			select {
