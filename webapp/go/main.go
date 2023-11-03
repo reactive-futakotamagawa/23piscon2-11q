@@ -1056,18 +1056,14 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 			}
 		}
 	} else {
-		// err = db.Select(&conditions,
-		// 	"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
-		// 		"	AND `timestamp` < ?"+
-		// 		"	AND ? <= `timestamp`"+
-		// 		"	ORDER BY `timestamp`",
-		// 	jiaIsuUUID, endTime, startTime, limit,
-		// )
-		for i := range allConditions {
-			if allConditions[i].Timestamp.Before(endTime) && (allConditions[i].Timestamp.After(startTime) || allConditions[i].Timestamp.Equal(startTime)) {
-				conditions = append(conditions, allConditions[i])
-			}
-		}
+		//よくわかんないけどキャッシュ使うとうまくいかなかった
+		err = db.Select(&conditions,
+			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+				"	AND `timestamp` < ?"+
+				"	AND `timestamp` <= ?"+
+				"	ORDER BY `timestamp` DESC",
+			jiaIsuUUID, endTime, startTime,
+		)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
