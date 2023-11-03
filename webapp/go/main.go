@@ -1203,7 +1203,7 @@ var nextTime time.Time
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
-	dropProbability := 0.5
+	dropProbability := 0.9
 	if rand.Float64() <= dropProbability {
 		c.Logger().Warnf("drop post isu condition request")
 		return c.NoContent(http.StatusAccepted)
@@ -1233,7 +1233,7 @@ func postIsuCondition(c echo.Context) error {
 	//defer tx.Rollback()
 	var count int
 	// default: tx
-	err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	err = db.Get(&count, "SELECT COUNT(1) FROM `isu` WHERE `jia_isu_uuid` = ? LIMIT 1", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1255,7 +1255,7 @@ func postIsuCondition(c echo.Context) error {
 	args := make([]interface{}, 0, len(postIsuConditionRequests)*5)
 
 	if nextTime.Before(time.Now()) {
-		nextTime = time.Now().Add(time.Second * 5)
+		nextTime = time.Now().Add(time.Second * 1)
 		doRequest := postIsuConditionRequests
 		postIsuConditionRequests = []PostIsuConditionRequests{}
 
