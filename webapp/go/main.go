@@ -1039,22 +1039,35 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 
 	conditions := []IsuCondition{}
 	var err error
-
+	allConditions, err := isuConditionsCacheByIsuUUID.Get(context.Background(), jiaIsuUUID)
+	if err != nil {
+		return nil, fmt.Errorf("db error: %v", err)
+	}
 	if startTime.IsZero() {
-		err = db.Select(&conditions,
-			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
-				"	AND `timestamp` < ?"+
-				"	ORDER BY `timestamp` DESC LIMIT ?",
-			jiaIsuUUID, endTime, limit,
-		)
+		// err = db.Select(&conditions,
+		// 	"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+		// 		"	AND `timestamp` < ?"+
+		// 		"	ORDER BY `timestamp` DESC LIMIT ?",
+		// 	jiaIsuUUID, endTime, limit,
+		// )
+		for i := range allConditions {
+			if allConditions[i].Timestamp.Before(endTime) {
+				conditions = append(conditions, allConditions[i])
+			}
+		}
 	} else {
-		err = db.Select(&conditions,
-			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
-				"	AND `timestamp` < ?"+
-				"	AND ? <= `timestamp`"+
-				"	ORDER BY `timestamp`",
-			jiaIsuUUID, endTime, startTime, limit,
-		)
+		// err = db.Select(&conditions,
+		// 	"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+		// 		"	AND `timestamp` < ?"+
+		// 		"	AND ? <= `timestamp`"+
+		// 		"	ORDER BY `timestamp`",
+		// 	jiaIsuUUID, endTime, startTime, limit,
+		// )
+		for i := range allConditions {
+			if allConditions[i].Timestamp.Before(endTime) && allConditions[i].Timestamp.After(startTime) {
+				conditions = append(conditions, allConditions[i])
+			}
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
