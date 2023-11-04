@@ -16,7 +16,7 @@ CREATE TABLE `isu` (
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
 CREATE TABLE `isu_condition` (
-  `jia_isu_uuid` CHAR(36) NOT NULL,
+  `jia_isu_uuid` CHAR(36) UNIQUE NOT NULL,
   `timestamp` DATETIME NOT NULL,
   `is_sitting` TINYINT(1) NOT NULL,
   `condition` VARCHAR(255) NOT NULL,
@@ -35,6 +35,6 @@ CREATE TABLE `isu_association_config` (
   `url` VARCHAR(255) NOT NULL UNIQUE
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
-ALTER TABLE `isu_condition` ADD INDEX `isu_condition_jia_isu_uuid_timestamp` (`jia_isu_uuid`,`timestamp`);
+ALTER TABLE `isu_condition` ADD INDEX `isu_condition_timestamp` (`timestamp`);
 ALTER TABLE `isu` ADD INDEX `isu_character` (`character`);
 # ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT '';
