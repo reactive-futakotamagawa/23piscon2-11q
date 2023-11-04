@@ -84,7 +84,6 @@ type GetIsuListResponse struct {
 }
 
 type IsuCondition struct {
-	ID             int       `db:"id"`
 	JIAIsuUUID     string    `db:"jia_isu_uuid"`
 	Timestamp      time.Time `db:"timestamp"`
 	IsSitting      bool      `db:"is_sitting"`
@@ -95,7 +94,6 @@ type IsuCondition struct {
 }
 
 type GetIsuCondition struct {
-	ID             int       `db:"id"`
 	JIAIsuUUID     string    `db:"jia_isu_uuid"`
 	Timestamp      time.Time `db:"timestamp"`
 	IsSitting      bool      `db:"is_sitting"`
@@ -560,10 +558,10 @@ func postInitialize(c echo.Context) error {
 	if err != nil {
 		fmt.Println(err)
 	}
-	//_, err = db.Exec("ALTER TABLE `isu_condition` DROP COLUMN `id`;")
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
+	_, err = db.Exec("ALTER TABLE `isu_condition` DROP COLUMN `id`;")
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	var conditions []IsuCondition
 	err = db.Select(&conditions, "SELECT * FROM `isu_condition`")
