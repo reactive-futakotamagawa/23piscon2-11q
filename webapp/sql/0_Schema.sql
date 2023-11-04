@@ -16,6 +16,7 @@ CREATE TABLE `isu` (
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
 CREATE TABLE `isu_condition` (
+  `id` bigint,
   `jia_isu_uuid` CHAR(36) UNIQUE NOT NULL,
   `timestamp` DATETIME NOT NULL,
   `is_sitting` TINYINT(1) NOT NULL,
