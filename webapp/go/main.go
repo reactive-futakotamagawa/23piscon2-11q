@@ -84,7 +84,6 @@ type GetIsuListResponse struct {
 }
 
 type IsuCondition struct {
-	ID             int       `db:"id"`
 	JIAIsuUUID     string    `db:"jia_isu_uuid"`
 	Timestamp      time.Time `db:"timestamp"`
 	IsSitting      bool      `db:"is_sitting"`
@@ -95,7 +94,6 @@ type IsuCondition struct {
 }
 
 type GetIsuCondition struct {
-	ID             int       `db:"id"`
 	JIAIsuUUID     string    `db:"jia_isu_uuid"`
 	Timestamp      time.Time `db:"timestamp"`
 	IsSitting      bool      `db:"is_sitting"`
@@ -573,7 +571,7 @@ func postInitialize(c echo.Context) error {
 			fmt.Println(err)
 		}
 
-		_, err = db.Exec("UPDATE `isu_condition` SET `condition_level` = ? WHERE `id` = ?", conditionLevel, condition.ID)
+		_, err = db.Exec("UPDATE `isu_condition` SET `condition_level` = ? WHERE `jia_isu_uuid` = ?", conditionLevel, condition.JIAIsuUUID)
 		if err != nil {
 			fmt.Println(err)
 		}
