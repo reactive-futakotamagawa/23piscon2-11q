@@ -558,6 +558,10 @@ func postInitialize(c echo.Context) error {
 	if err != nil {
 		fmt.Println(err)
 	}
+	_, err = db.Exec("ALTER TABLE `isu_condition` DROP COLUMN `id`;")
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	var conditions []IsuCondition
 	err = db.Select(&conditions, "SELECT * FROM `isu_condition`")
