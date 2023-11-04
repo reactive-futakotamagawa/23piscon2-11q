@@ -533,6 +533,8 @@ func postInitialize(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
 
+	fmt.Println("1")
+
 	cmd := exec.Command("../sql/init.sh")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stderr
@@ -541,6 +543,8 @@ func postInitialize(c echo.Context) error {
 		c.Logger().Errorf("exec init.sh error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	fmt.Println("2")
 
 	_, err = db.Exec(
 		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
@@ -552,6 +556,8 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	fmt.Println("3")
+
 	isuConditionCacheByIsuUUID.Purge()
 
 	_, err = db.Exec("ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT ''")
@@ -559,11 +565,15 @@ func postInitialize(c echo.Context) error {
 		fmt.Println(err)
 	}
 
+	fmt.Println("4")
+
 	var conditions []IsuCondition
 	err = db.Select(&conditions, "SELECT * FROM `isu_condition`")
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	fmt.Println("5")
 
 	for _, condition := range conditions {
 		conditionLevel, err := calculateConditionLevel(condition.Condition)
@@ -576,6 +586,8 @@ func postInitialize(c echo.Context) error {
 			fmt.Println(err)
 		}
 	}
+
+	fmt.Println("6")
 
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
