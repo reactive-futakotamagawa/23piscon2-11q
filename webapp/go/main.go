@@ -577,7 +577,7 @@ func postInitialize(c echo.Context) error {
 			fmt.Println(err)
 		}
 
-		_, err = db.Exec("UPDATE `isu_condition` SET `condition_level` = ? WHERE `jia_isu_uuid` = ?", conditionLevel, condition.JIAIsuUUID)
+		_, err = db.Exec("UPDATE `isu_condition` SET `condition_level` = ? WHERE `jia_isu_uuid` = ? AND `timestamp` = ?", conditionLevel, condition.JIAIsuUUID, condition.Timestamp)
 		if err != nil {
 			fmt.Println(err)
 		}
