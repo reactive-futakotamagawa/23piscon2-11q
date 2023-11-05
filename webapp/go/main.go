@@ -409,7 +409,7 @@ func main() {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
 	}
-	isuImageByIsuUUID, err = sc.New[string, *[]byte](getIsuImageByIsuUUID, time.Minute, time.Minute)
+	isuByIsuUUID, err = sc.New[string, *Isu](getIsuByIsuUUID, time.Minute, time.Minute)
 	if err != nil {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
@@ -537,15 +537,15 @@ func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
 	return &count, nil
 }
 
-var isuImageByIsuUUID *sc.Cache[string, *[]byte]
+var isuByIsuUUID *sc.Cache[string, *Isu]
 
-func getIsuImageByIsuUUID(_ context.Context, isuUUID string) (*[]byte, error) {
-	var isuImage []byte
-	err := db.Get(&isuImage, "SELECT image FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
+func getIsuByIsuUUID(_ context.Context, isuUUID string) (*Isu, error) {
+	var isu Isu
+	err := db.Get(&isu, "SELECT * FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
 	if err != nil {
 		return nil, err
 	}
-	return &isuImage, nil
+	return &isu, nil
 }
 
 type IsuCache struct {
@@ -609,7 +609,7 @@ func postInitialize(c echo.Context) error {
 
 	isuConditionCacheByIsuUUID.Purge()
 	isuCountByIsuUUID.Purge()
-	isuImageByIsuUUID.Purge()
+	isuByIsuUUID.Purge()
 
 	_, err = db.Exec("ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT ''")
 	if err != nil {
@@ -959,7 +959,7 @@ func postIsu(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	isuImageByIsuUUID.Forget(jiaIsuUUID)
+	isuByIsuUUID.Forget(jiaIsuUUID)
 	isuCountByIsuUUID.Forget(jiaIsuUUID)
 	isuCache.Set([]Isu{isu})
 
@@ -999,7 +999,7 @@ func getIsuID(c echo.Context) error {
 // GET /api/isu/:jia_isu_uuid/icon
 // ISUのアイコンを取得
 func getIsuIcon(c echo.Context) error {
-	_, errStatusCode, err := getUserIDFromSession(c)
+	jiaUserUUID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
 			return c.String(http.StatusUnauthorized, "you are not signed in")
@@ -1011,10 +1011,13 @@ func getIsuIcon(c echo.Context) error {
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
-	var image []byte
-	imagePointer, err := isuImageByIsuUUID.Get(context.Background(), jiaIsuUUID)
+	var isu *Isu
+	isu, err = isuByIsuUUID.Get(context.Background(), jiaIsuUUID)
 	//err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 	//	jiaUserID, jiaIsuUUID)
+	if isu.JIAUserID != jiaUserUUID {
+		return c.String(http.StatusNotFound, "not found: isu")
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return c.String(http.StatusNotFound, "not found: isu")
@@ -1023,9 +1026,7 @@ func getIsuIcon(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	image = *imagePointer
-
-	return c.Blob(http.StatusOK, "", image)
+	return c.Blob(http.StatusOK, "", isu.Image)
 }
 
 // GET /api/isu/:jia_isu_uuid/graph
