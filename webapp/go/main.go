@@ -558,6 +558,13 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	var count int
+	err = db.Get(&count,
+		"SELECT COUNT(*) FROM `isu`",
+	)
+	nextIsuID = count - 1
+	fmt.Println(nextIsuID)
+
 	_, err = db.Exec(
 		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
 		"jia_service_url",
@@ -575,6 +582,14 @@ func postInitialize(c echo.Context) error {
 		fmt.Println(err)
 	}
 	_, err = db.Exec("ALTER TABLE `isu_condition` DROP COLUMN `id`;")
+	if err != nil {
+		fmt.Println(err)
+	}
+	_, err = db.Exec("ALTER TABLE `isu` CHANGE COLUMN `id` `id` BIGINT;")
+	if err != nil {
+		fmt.Println(err)
+	}
+	_, err = db.Exec("ALTER TABLE `isu` DROP PRIMARY KEY , ADD PRIMARY KEY (`jia_isu_uuid`);")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -790,6 +805,8 @@ func getIsuList(c echo.Context) error {
 
 // POST /api/isu
 // ISUを登録
+var nextIsuID int
+
 func postIsu(c echo.Context) error {
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
@@ -843,10 +860,12 @@ func postIsu(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
+	nextIsuID += 1
 	_, err = tx.Exec("INSERT INTO `isu`"+
-		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",
-		jiaIsuUUID, isuName, image, jiaUserID)
+		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`, `id`) VALUES (?, ?, ?, ?, ?)",
+		jiaIsuUUID, isuName, image, jiaUserID, nextIsuID)
 	if err != nil {
+		nextIsuID -= 1
 		mysqlErr, ok := err.(*mysql.MySQLError)
 
 		if ok && mysqlErr.Number == uint16(mysqlErrNumDuplicateEntry) {
