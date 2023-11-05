@@ -218,9 +218,9 @@ func init() {
 		log.Fatalf("failed to parse ECDSA public key: %v", err)
 	}
 
-	http.DefaultTransport.(*http.Transport).MaxIdleConns = 0           // infinite
-	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 1024 // default: 2
-	http.DefaultTransport.(*http.Transport).ForceAttemptHTTP2 = true   // go1.13以上
+	http.DefaultTransport.(*http.Transport).MaxIdleConns = 0                // infinite
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 1024 * 16 // default: 2
+	http.DefaultTransport.(*http.Transport).ForceAttemptHTTP2 = true        // go1.13以上
 }
 
 // SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1
@@ -233,6 +233,20 @@ func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition
 		return nil, err
 	}
 	return &condition, nil
+}
+
+var isuCountByIsuUUID *sc.Cache[string, *int]
+
+func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
+	var count int
+	err := db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return &count, nil
+	}
+	if err != nil {
+		return &count, err
+	}
+	return &count, nil
 }
 
 type IsuCache struct {
@@ -436,6 +450,11 @@ func main() {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
 	}
+	isuCountByIsuUUID, err = sc.New[string, *int](getIsuCountByIsuUUID, time.Minute, time.Minute)
+	if err != nil {
+		e.Logger.Fatalf("failed to create cache: %v", err)
+		return
+	}
 
 	isuCache = IsuCache{Isu: make(map[string]Isu)}
 
@@ -569,6 +588,7 @@ func postInitialize(c echo.Context) error {
 	}
 
 	isuConditionCacheByIsuUUID.Purge()
+	isuCountByIsuUUID.Purge()
 
 	_, err = db.Exec("ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT ''")
 	if err != nil {
@@ -919,6 +939,7 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	isuCountByIsuUUID.Forget(jiaIsuUUID)
 	isuCache.Set([]Isu{isu})
 
 	return c.JSON(http.StatusCreated, isu)
