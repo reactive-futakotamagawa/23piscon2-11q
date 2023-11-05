@@ -1063,16 +1063,14 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 	var startTimeInThisHour time.Time
 	var condition IsuCondition
 
-	rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? AND `timestamp` <= ? AND ? <= `timestamp` ORDER BY `timestamp` ASC", jiaIsuUUID, graphDate.Add(time.Hour*24), graphDate)
+	var conditions []IsuCondition
+	err := tx.Select(&conditions, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? AND `timestamp` <= ? AND ? <= `timestamp` ORDER BY `timestamp` ASC", jiaIsuUUID, graphDate.Add(time.Hour*24), graphDate)
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
 	}
 
-	for rows.Next() {
-		err = rows.StructScan(&condition)
-		if err != nil {
-			return nil, err
-		}
+	for i := range conditions {
+		condition = conditions[i]
 
 		truncatedConditionTime := condition.Timestamp.Truncate(time.Hour)
 		if truncatedConditionTime != startTimeInThisHour {
