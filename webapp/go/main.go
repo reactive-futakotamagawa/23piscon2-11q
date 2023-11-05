@@ -296,7 +296,6 @@ func doPostIsuCondition() {
 		})
 
 		isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
-		go isuConditionCacheByIsuUUID.Get(context.Background(), cond.JiaIsuUUID)//Forgetした後にGetすることで実質Update
 	}
 
 	_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message, :condition_level)", args)
