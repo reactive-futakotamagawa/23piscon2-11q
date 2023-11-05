@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS `isu`;
 DROP TABLE IF EXISTS `user`;
 
 CREATE TABLE `isu` (
-  `id` bigint AUTO_INCREMENT,
+  `id` bigint,
   `jia_isu_uuid` CHAR(36) NOT NULL UNIQUE,
   `name` VARCHAR(255) NOT NULL,
   `image` LONGBLOB,
@@ -12,7 +12,7 @@ CREATE TABLE `isu` (
   `jia_user_id` VARCHAR(255) NOT NULL,
   `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-   PRIMARY KEY(`id`)
+   PRIMARY KEY(`jia_isu_uuid`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
 CREATE TABLE `isu_condition` (
