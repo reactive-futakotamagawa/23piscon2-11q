@@ -4,3 +4,6 @@ MYSQL_USER=isucon
 MYSQL_DBNAME=isucondition
 MYSQL_PASS=isucon
 POST_ISUCONDITION_TARGET_BASE_URL="http://isucondition-3.t.isucon.dev"
+TICKER_POST_ISU_CONDITION=100
+tickerGetTrendEnv=500
+
