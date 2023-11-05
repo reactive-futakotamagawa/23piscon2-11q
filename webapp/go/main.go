@@ -439,25 +439,41 @@ func main() {
 
 	isuCache = IsuCache{Isu: make(map[string]Isu)}
 
-	tickerPostIsuCondition := time.NewTicker(100 * time.Millisecond)
-	go func() {
-		for {
-			select {
-			case _ = <-tickerPostIsuCondition.C:
-				doPostIsuCondition()
-			}
+	tickerPostIsuConditionEnv := os.Getenv("TICKER_POST_ISU_CONDITION")
+	if tickerPostIsuConditionEnv != "" {
+		postIsuConditionTime, err := strconv.Atoi(tickerPostIsuConditionEnv)
+		if err != nil {
+			e.Logger.Fatalf("failed to convert TICKER_POST_ISU_CONDITION: %v", err)
+		} else {
+			tickerPostIsuCondition := time.NewTicker(time.Duration(postIsuConditionTime) * time.Millisecond)
+			go func() {
+				for {
+					select {
+					case _ = <-tickerPostIsuCondition.C:
+						doPostIsuCondition()
+					}
+				}
+			}()
 		}
-	}()
+	}
 
-	tickerGetTrend := time.NewTicker(500 * time.Millisecond)
-	go func() {
-		for {
-			select {
-			case _ = <-tickerGetTrend.C:
-				updateTrend()
-			}
+	tickerGetTrendEnv := os.Getenv("TICKER_GET_TREND")
+	if tickerGetTrendEnv != "" {
+		getTrendTime, err := strconv.Atoi(tickerGetTrendEnv)
+		if err != nil {
+			e.Logger.Fatalf("failed to convert TICKER_GET_TREND: %v", err)
+		} else {
+			tickerGetTrend := time.NewTicker(time.Duration(getTrendTime) * time.Millisecond)
+			go func() {
+				for {
+					select {
+					case _ = <-tickerGetTrend.C:
+						updateTrend()
+					}
+				}
+			}()
 		}
-	}()
+	}
 
 	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
 	e.Logger.Fatal(e.Start(serverPort))
