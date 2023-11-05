@@ -1017,10 +1017,6 @@ func getIsuIcon(c echo.Context) error {
 	isu, err = isuByIsuUUID.Get(context.Background(), jiaIsuUUID)
 	//err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 	//	jiaUserID, jiaIsuUUID)
-	if isu.JIAUserID != jiaUserUUID {
-		fmt.Println("not found: isu")
-		return c.String(http.StatusNotFound, "not found: isu")
-	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			fmt.Println("norows")
@@ -1029,6 +1025,10 @@ func getIsuIcon(c echo.Context) error {
 		fmt.Println("db error")
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+	if isu.JIAUserID != jiaUserUUID {
+		fmt.Println("not found: isu")
+		return c.String(http.StatusNotFound, "not found: isu")
 	}
 	return c.Blob(http.StatusOK, "", isu.Image)
 }
