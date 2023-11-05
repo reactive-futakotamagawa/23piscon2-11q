@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/felixge/fgprof"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -24,7 +23,6 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
-	"github.com/kaz/pprotein/integration/standalone"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
@@ -350,11 +348,11 @@ func updateTrend() {
 }
 
 func main() {
-	go standalone.Integrate(":8888")
-	http.DefaultServeMux.Handle("/debug/fgprof", fgprof.Handler())
-	go func() {
-		fmt.Println(http.ListenAndServe(":6060", nil))
-	}()
+	//go standalone.Integrate(":8888")
+	//http.DefaultServeMux.Handle("/debug/fgprof", fgprof.Handler())
+	//go func() {
+	//	fmt.Println(http.ListenAndServe(":6060", nil))
+	//}()
 
 	e := echo.New()
 	// e.Debug = true
@@ -580,11 +578,11 @@ func (c *IsuCache) GetAll() []Isu {
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
-	go func() {
-		if _, err := http.Get("http://p.isucon.ikura-hamu.work/api/group/collect"); err != nil {
-			log.Printf("failed to communicate with pprotein: %v", err)
-		}
-	}()
+	//go func() {
+	//	if _, err := http.Get("http://p.isucon.ikura-hamu.work/api/group/collect"); err != nil {
+	//		log.Printf("failed to communicate with pprotein: %v", err)
+	//	}
+	//}()
 
 	if os.Getenv("SERVER_ID") == "3" {
 		fmt.Println("Cache Purged")
