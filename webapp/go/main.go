@@ -562,7 +562,8 @@ func postInitialize(c echo.Context) error {
 	err = db.Get(&count,
 		"SELECT COUNT(*) FROM `isu`",
 	)
-	nextIsuID = count
+	nextIsuID = count - 1
+	fmt.Println(nextIsuID)
 
 	_, err = db.Exec(
 		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
