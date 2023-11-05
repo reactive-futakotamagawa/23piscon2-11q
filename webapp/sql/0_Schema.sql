@@ -38,4 +38,6 @@ CREATE TABLE `isu_association_config` (
 
 # ALTER TABLE `isu_condition` ADD INDEX `isu_condition_timestamp` (`timestamp`);
 ALTER TABLE `isu` ADD INDEX `isu_character` (`character`);
+ALTER TABLE `isu` ADD INDEX `isu_jia_isu_uuid` (`jia_isu_uuid`);
+ALTER TABLE `isu` ADD INDEX `isu_jia_isu_uuid_jia_user_id` (`jia_isu_uuid`, `jia_user_id`);
 # ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT '';
