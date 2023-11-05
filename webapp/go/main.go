@@ -541,7 +541,7 @@ var isuImageByIsuUUID *sc.Cache[string, *[]byte]
 
 func getIsuImageByIsuUUID(_ context.Context, isuUUID string) (*[]byte, error) {
 	var isuImage []byte
-	err := db.Get(&isuImage, "SELECT image FROM `isuImage` WHERE `jia_isu_uuid` = ?", isuUUID)
+	err := db.Get(&isuImage, "SELECT image FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -1013,7 +1013,7 @@ func getIsuIcon(c echo.Context) error {
 
 	var image []byte
 	imagePointer, err := isuImageByIsuUUID.Get(context.Background(), jiaIsuUUID)
-	//err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ?",
+	//err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 	//	jiaUserID, jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
