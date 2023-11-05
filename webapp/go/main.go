@@ -1000,6 +1000,7 @@ func getIsuID(c echo.Context) error {
 // ISUのアイコンを取得
 func getIsuIcon(c echo.Context) error {
 	jiaUserUUID, errStatusCode, err := getUserIDFromSession(c)
+	fmt.Println(jiaUserUUID)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
 			return c.String(http.StatusUnauthorized, "you are not signed in")
@@ -1010,19 +1011,22 @@ func getIsuIcon(c echo.Context) error {
 	}
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
+	fmt.Println(jiaIsuUUID)
 
 	var isu *Isu
 	isu, err = isuByIsuUUID.Get(context.Background(), jiaIsuUUID)
 	//err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 	//	jiaUserID, jiaIsuUUID)
 	if isu.JIAUserID != jiaUserUUID {
+		fmt.Println("not found: isu")
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("norows")
 			return c.String(http.StatusNotFound, "not found: isu")
 		}
-
+		fmt.Println("db error")
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
