@@ -1007,6 +1007,8 @@ func getIsuID(c echo.Context) error {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
+	res = *isu
+
 	return c.JSON(http.StatusOK, res)
 }
 
