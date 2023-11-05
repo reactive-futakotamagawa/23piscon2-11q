@@ -449,7 +449,7 @@ func main() {
 		}
 	}()
 
-	tickerGetTrend := time.NewTicker(100 * time.Millisecond)
+	tickerGetTrend := time.NewTicker(500 * time.Millisecond)
 	go func() {
 		for {
 			select {
