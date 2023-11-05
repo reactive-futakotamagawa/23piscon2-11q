@@ -224,57 +224,6 @@ func init() {
 	http.DefaultTransport.(*http.Transport).ForceAttemptHTTP2 = true        // go1.13以上
 }
 
-// SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1
-var isuConditionCacheByIsuUUID *sc.Cache[string, *IsuCondition]
-
-func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition, error) {
-	var condition IsuCondition
-	err := db.Get(&condition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isuUUID)
-	if err != nil {
-		return nil, err
-	}
-	return &condition, nil
-}
-
-var isuCountByIsuUUID *sc.Cache[string, *int]
-
-func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
-	var count int
-	err := db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return &count, nil
-	}
-	if err != nil {
-		return &count, err
-	}
-	return &count, nil
-}
-
-type IsuCache struct {
-	Isu map[string]Isu
-	mu  sync.Mutex
-}
-
-var isuCache IsuCache
-
-func (c *IsuCache) Set(isu []Isu) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for _, i := range isu {
-		c.Isu[i.JIAIsuUUID] = i
-	}
-}
-
-func (c *IsuCache) GetAll() []Isu {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	isu := make([]Isu, 0, len(c.Isu))
-	for _, i := range c.Isu {
-		isu = append(isu, i)
-	}
-	return isu
-}
-
 func doPostIsuCondition() {
 	if len(postIsuConditionRequests) == 0 {
 		return
@@ -460,6 +409,11 @@ func main() {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
 	}
+	isuByIsuUUID, err = sc.New[string, *Isu](getIsuByIsuUUID, time.Minute, time.Minute)
+	if err != nil {
+		e.Logger.Fatalf("failed to create cache: %v", err)
+		return
+	}
 
 	isuCache = IsuCache{Isu: make(map[string]Isu)}
 
@@ -558,6 +512,67 @@ func getJIAServiceURL(tx *sqlx.Tx) string {
 	return config.URL
 }
 
+var isuConditionCacheByIsuUUID *sc.Cache[string, *IsuCondition]
+
+func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition, error) {
+	var condition IsuCondition
+	err := db.Get(&condition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isuUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &condition, nil
+}
+
+var isuCountByIsuUUID *sc.Cache[string, *int]
+
+func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
+	var count int
+	err := db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return &count, nil
+	}
+	if err != nil {
+		return &count, err
+	}
+	return &count, nil
+}
+
+var isuByIsuUUID *sc.Cache[string, *Isu]
+
+func getIsuByIsuUUID(_ context.Context, isuUUID string) (*Isu, error) {
+	var isu Isu
+	err := db.Get(&isu, "SELECT * FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &isu, nil
+}
+
+type IsuCache struct {
+	Isu map[string]Isu
+	mu  sync.Mutex
+}
+
+var isuCache IsuCache
+
+func (c *IsuCache) Set(isu []Isu) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, i := range isu {
+		c.Isu[i.JIAIsuUUID] = i
+	}
+}
+
+func (c *IsuCache) GetAll() []Isu {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	isu := make([]Isu, 0, len(c.Isu))
+	for _, i := range c.Isu {
+		isu = append(isu, i)
+	}
+	return isu
+}
+
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
@@ -594,6 +609,7 @@ func postInitialize(c echo.Context) error {
 
 	isuConditionCacheByIsuUUID.Purge()
 	isuCountByIsuUUID.Purge()
+	isuByIsuUUID.Purge()
 
 	_, err = db.Exec("ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT ''")
 	if err != nil {
@@ -943,7 +959,7 @@ func postIsu(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-
+	isuByIsuUUID.Forget(jiaIsuUUID)
 	isuCountByIsuUUID.Forget(jiaIsuUUID)
 	isuCache.Set([]Isu{isu})
 
@@ -983,7 +999,8 @@ func getIsuID(c echo.Context) error {
 // GET /api/isu/:jia_isu_uuid/icon
 // ISUのアイコンを取得
 func getIsuIcon(c echo.Context) error {
-	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
+	jiaUserUUID, errStatusCode, err := getUserIDFromSession(c)
+	fmt.Println(jiaUserUUID)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
 			return c.String(http.StatusUnauthorized, "you are not signed in")
@@ -994,20 +1011,26 @@ func getIsuIcon(c echo.Context) error {
 	}
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
+	fmt.Println(jiaIsuUUID)
 
-	var image []byte
-	err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
-		jiaUserID, jiaIsuUUID)
+	var isu *Isu
+	isu, err = isuByIsuUUID.Get(context.Background(), jiaIsuUUID)
+	//err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+	//	jiaUserID, jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("norows")
 			return c.String(http.StatusNotFound, "not found: isu")
 		}
-
+		fmt.Println("db error")
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-
-	return c.Blob(http.StatusOK, "", image)
+	if isu.JIAUserID != jiaUserUUID {
+		fmt.Println("not found: isu")
+		return c.String(http.StatusNotFound, "not found: isu")
+	}
+	return c.Blob(http.StatusOK, "", isu.Image)
 }
 
 // GET /api/isu/:jia_isu_uuid/graph
