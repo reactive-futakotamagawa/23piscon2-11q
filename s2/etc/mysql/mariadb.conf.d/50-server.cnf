@@ -41,7 +41,7 @@ bind-address            = 0.0.0.0
 #table_cache            = 64
 #thread_concurrency     = 10
 
-max_connections=10000  # <- connection の limit を更新
+max_connections=3584  # <- connection の limit を更新
 innodb_buffer_pool_size = 3GB # ディスクイメージをメモリ上にバッファさせる値をきめる設定値(メモリの75%くらい)
 innodb_flush_log_at_trx_commit = 0 # 1に設定するとトランザクション単位でログを出力するが 2 を指定すると1秒間に1回ログを吐く。0だとログも1秒に1回。
 innodb_flush_method = O_DIRECT # データファイル、ログファイルの読み書き方式を指定する(実験する価値はある)
