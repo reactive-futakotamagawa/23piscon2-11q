@@ -6,6 +6,7 @@ toolchain go1.21.2
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/felixge/fgprof v0.9.3
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/jmoiron/sqlx v1.3.4
@@ -20,7 +21,6 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
-	github.com/felixge/fgprof v0.9.2 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/go-git/go-git/v5 v5.4.2 // indirect

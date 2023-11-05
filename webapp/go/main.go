@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/felixge/fgprof"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -397,6 +398,10 @@ func updateTrend() {
 
 func main() {
 	go standalone.Integrate(":8888")
+	http.DefaultServeMux.Handle("/debug/fgprof", fgprof.Handler())
+	go func() {
+		fmt.Println(http.ListenAndServe(":6060", nil))
+	}()
 
 	e := echo.New()
 	// e.Debug = true
