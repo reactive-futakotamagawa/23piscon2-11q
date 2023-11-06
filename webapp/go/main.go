@@ -1192,14 +1192,13 @@ func getIsuGraph(c echo.Context) error {
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 	datetimeStr := c.QueryParam("datetime")
-	//if datetimeStr == "" {
-	//	return c.String(http.StatusBadRequest, "missing: datetime")
-	//}
-	//datetimeInt64, err := strconv.ParseInt(datetimeStr, 10, 64)
-	//if err != nil {
-	//	return c.String(http.StatusBadRequest, "bad format: datetime")
-	//}
-	//date := time.Unix(datetimeInt64, 0).Truncate(time.Hour)
+	if datetimeStr == "" {
+		return c.String(http.StatusBadRequest, "missing: datetime")
+	}
+	_, err = strconv.ParseInt(datetimeStr, 10, 64)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "bad format: datetime")
+	}
 
 	//tx, err := db.Beginx()
 	if err != nil {
