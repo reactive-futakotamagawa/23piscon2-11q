@@ -909,7 +909,6 @@ func postIsu(c echo.Context) error {
 
 	targetURL := getJIAServiceURL(tx) + "/api/activate"
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
-	isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
 		c.Logger().Error(err)
