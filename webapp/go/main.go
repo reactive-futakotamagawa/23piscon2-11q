@@ -414,6 +414,11 @@ func main() {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
 	}
+	isuGraphByIsuUUID, err = sc.New[string, *[]GraphResponse](getIsuGraphByIsuUUID, time.Minute, time.Minute)
+	if err != nil {
+		e.Logger.Fatalf("failed to create cache: %v", err)
+		return
+	}
 
 	isuCache = IsuCache{Isu: make(map[string]Isu)}
 
