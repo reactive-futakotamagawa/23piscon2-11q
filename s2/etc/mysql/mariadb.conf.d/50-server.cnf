@@ -41,24 +41,6 @@ bind-address            = 0.0.0.0
 #table_cache            = 64
 #thread_concurrency     = 10
 
-max_connections=1000  # <- connection の limit を更新
-innodb_buffer_pool_size = 3GB # ディスクイメージをメモリ上にバッファさせる値をきめる設定値(メモリの75%くらい)
-innodb_flush_log_at_trx_commit = 0 # 1に設定するとトランザクション単位でログを出力するが 2 を指定すると1秒間に1回ログを吐く。0だとログも1秒に1回。
-innodb_flush_method = O_DIRECT # データファイル、ログファイルの読み書き方式を指定する(実験する価値はある)
-
-innodb_file_per_table=ON # InnoDBのデータ領域をテーブルごとに変える
-
-# innoDBの更新ログを保持するメモリ
-innodb_log_buffer_size = 16MB
-
-# InnoDBの更新ログを記録するディスク上のファイルサイズ(innodb_buffer_pool_sizeの4分の1程度)
-innodb_log_file_size=750MB
-
-# ORDER BYやGROUP BYのときに使われるメモリ上の領域
-innodb_sort_buffer_size = 4MB
-read_rnd_buffer_size = 2MB #
-key_buffer_size = 256MB
-
 #
 # * Query Cache Configuration
 #
@@ -95,6 +77,23 @@ expire_logs_days        = 10
 #max_binlog_size        = 100M
 #binlog_do_db           = include_database_name
 #binlog_ignore_db       = exclude_database_name
+
+skip-log-bin
+skip-innodb-doublewrite
+max_allowed_packet = 50M
+max_connections = 5000
+# ディスクイメージをメモリ上にバッファさせる値をきめる設定値 (別鯖なら搭載メモリの80%くらい)
+innodb_buffer_pool_size = 2000MB
+# InnoDBの更新ログを記録するディスク上のファイルサイズ(innodb_buffer_pool_sizeの4分の1程度)
+innodb_log_file_size = 500MB
+# innoDBの更新ログを保持するメモリ(default: 8MB)、大量のデータの更新に効く
+innodb_log_buffer_size = 50MB
+# 1に設定するとトランザクション単位でログを出力するが 2 を指定すると1秒間に1回ログファイルに出力するようになる
+innodb_flush_log_at_trx_commit = 0
+# データファイル、ログファイルの読み書き方式を指定する (OSによるディスクキャッシュとの2重キャッシュを防ぐ)
+innodb_flush_method = O_DIRECT
+# ORDER BYやGROUP BYのときに使われるメモリ量
+innodb_sort_buffer_size = 10MB
 
 #
 # * Security Features
