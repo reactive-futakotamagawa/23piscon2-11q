@@ -553,9 +553,20 @@ var isuGraphByIsuUUID *sc.Cache[string, *[]GraphResponse]
 func getIsuGraphByIsuUUID(_ context.Context, isuUUIDAndData string) (*[]GraphResponse, error) {
 	var jiaIsuUUID string
 	var graphDate time.Time
+
 	// date := time.Unix(datetimeInt64, 0).Truncate(time.Hour).Format("2006-01-02-15")
 	jiaIsuUUID = isuUUIDAndData[:36]
-	graphDate, err := time.Parse("2006-01-02-15", isuUUIDAndData[36:])
+	datetimeStr := isuUUIDAndData[36:]
+
+	if datetimeStr == "" {
+		return nil, errors.New("bad format")
+	}
+	datetimeInt64, err := strconv.ParseInt(datetimeStr, 10, 64)
+	if err != nil {
+		return nil, errors.New("bad format")
+		//return c.String(http.StatusBadRequest, "bad format: datetime")
+	}
+	graphDate = time.Unix(datetimeInt64, 0).Truncate(time.Hour)
 
 	dataPoints := []GraphDataPointWithInfo{}
 	conditionsInThisHour := []IsuCondition{}
@@ -1172,14 +1183,14 @@ func getIsuGraph(c echo.Context) error {
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 	datetimeStr := c.QueryParam("datetime")
-	if datetimeStr == "" {
-		return c.String(http.StatusBadRequest, "missing: datetime")
-	}
-	datetimeInt64, err := strconv.ParseInt(datetimeStr, 10, 64)
-	if err != nil {
-		return c.String(http.StatusBadRequest, "bad format: datetime")
-	}
-	date := time.Unix(datetimeInt64, 0).Truncate(time.Hour)
+	//if datetimeStr == "" {
+	//	return c.String(http.StatusBadRequest, "missing: datetime")
+	//}
+	//datetimeInt64, err := strconv.ParseInt(datetimeStr, 10, 64)
+	//if err != nil {
+	//	return c.String(http.StatusBadRequest, "bad format: datetime")
+	//}
+	//date := time.Unix(datetimeInt64, 0).Truncate(time.Hour)
 
 	//tx, err := db.Beginx()
 	if err != nil {
@@ -1213,24 +1224,20 @@ func getIsuGraph(c echo.Context) error {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
-	dataString := date.Format("2006-01-02-15")
-	isuGraphByIsuUUID.Get(context.Background(), jiaIsuUUID+dataString)
+	resPointer, err := isuGraphByIsuUUID.Get(context.Background(), jiaIsuUUID+datetimeStr)
+	if errors.Is(err, errors.New("bad format")) {
+		return c.String(http.StatusBadRequest, "bad format: datetime")
+	}
 	if err != nil {
-		c.Logger().Error(err)
+		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	resPointer, err := isuGraphByIsuUUID.Get(context.Background(), jiaIsuUUID+dataString)
 	res := *resPointer
 	//res, err := generateIsuGraphResponse(jiaIsuUUID, date)
 	//if err != nil {
 	//	c.Logger().Error(err)
 	//	return c.NoContent(http.StatusInternalServerError)
 	//}
-
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
 
 	return c.JSON(http.StatusOK, res)
 }
