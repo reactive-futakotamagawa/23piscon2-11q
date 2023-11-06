@@ -1242,6 +1242,10 @@ func getIsuGraph(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	if resPointer == nil {
+		return c.String(http.StatusNotFound, "not found: isu")
+	}
+	
 	res := *resPointer
 	//res, err := generateIsuGraphResponse(jiaIsuUUID, date)
 	//if err != nil {
