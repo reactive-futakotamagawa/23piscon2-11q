@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -36,6 +37,7 @@ const (
 	frontendContentsPath        = "../public"
 	jiaJWTSigningKeyPath        = "../ec256-public.pem"
 	defaultIconFilePath         = "../NoImage.jpg"
+	isuImagesPath               = "../isu-images"
 	defaultJIAServiceURL        = "http://localhost:5000"
 	mysqlErrNumDuplicateEntry   = 1062
 	conditionLevelInfo          = "info"
@@ -65,7 +67,6 @@ type Isu struct {
 	ID         int       `db:"id" json:"id"`
 	JIAIsuUUID string    `db:"jia_isu_uuid" json:"jia_isu_uuid"`
 	Name       string    `db:"name" json:"name"`
-	Image      []byte    `db:"image" json:"-"`
 	Character  string    `db:"character" json:"character"`
 	JIAUserID  string    `db:"jia_user_id" json:"-"`
 	CreatedAt  time.Time `db:"created_at" json:"-"`
@@ -619,6 +620,10 @@ func postInitialize(c echo.Context) error {
 	if err != nil {
 		fmt.Println(err)
 	}
+	_, err = db.Exec("ALTER TABLE isu DROP COLUMN image;")
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	var conditions []IsuCondition
 	err = db.Select(&conditions, "SELECT * FROM `isu_condition`")
@@ -877,15 +882,19 @@ func postIsu(c echo.Context) error {
 		}
 	}
 
+	err = os.WriteFile(filepath.Join(isuImagesPath, jiaIsuUUID), image, 0644)
+	if err != nil {
+		c.Logger().Errorf("write image file error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	tx, err := db.Beginx()
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
-
-	_, err = tx.Exec("INSERT INTO `isu`"+
-		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",
+	_, err = tx.Exec("INSERT INTO `isu` (`jia_isu_uuid`, `name`, `jia_user_id`) VALUES (?, ?, ?, ?)",
 		jiaIsuUUID, isuName, image, jiaUserID)
 	if err != nil {
 		mysqlErr, ok := err.(*mysql.MySQLError)
@@ -1041,7 +1050,11 @@ func getIsuIcon(c echo.Context) error {
 	if isu.JIAUserID != jiaUserUUID {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
-	return c.Blob(http.StatusOK, "", isu.Image)
+
+	//return c.Blob(http.StatusOK, "", isu.Image)
+
+	c.Response().Header().Set("X-Accel-Redirect", "/isu-images/"+jiaIsuUUID)
+	return c.NoContent(http.StatusOK)
 }
 
 // GET /api/isu/:jia_isu_uuid/graph
