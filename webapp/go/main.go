@@ -226,6 +226,7 @@ func init() {
 }
 
 func doPostIsuCondition() {
+	fmt.Println(len(postIsuConditionRequests))
 	if len(postIsuConditionRequests) == 0 {
 		return
 	}
