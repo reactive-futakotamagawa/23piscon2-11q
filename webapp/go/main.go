@@ -583,11 +583,42 @@ func postInitialize(c echo.Context) error {
 		}
 	}()
 
+	if os.Getenv("SERVER_ID") == "3" {
+		isuConditionCacheByIsuUUID.Purge()
+		isuCountByIsuUUID.Purge()
+		isuByIsuUUID.Purge()
+
+		return c.JSON(http.StatusOK, InitializeResponse{
+			Language: "go",
+		})
+	}
+
 	var request InitializeRequest
 	err := c.Bind(&request)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
+
+	reciver_err := make(chan error)
+	go func() {
+		defer close(reciver_err)
+		req, err := http.NewRequest(http.MethodPost, "http://172.31.38.28/initialize", bytes.NewBuffer([]byte{}))
+		if err != nil {
+			reciver_err <- err
+			return
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			reciver_err <- err
+			return
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			reciver_err <- fmt.Errorf("Initialize returned error: status code %v", res.StatusCode)
+			return
+		}
+	}()
 
 	cmd := exec.Command("../sql/init.sh")
 	cmd.Stderr = os.Stderr
