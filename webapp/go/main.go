@@ -558,6 +558,9 @@ func getIsuGraphByIsuUUID(_ context.Context, isuUUIDAndData string) (*[]GraphRes
 	jiaIsuUUID = isuUUIDAndData[:36]
 	datetimeStr := isuUUIDAndData[36:]
 
+	fmt.Println(jiaIsuUUID)
+	fmt.Println(datetimeStr)
+
 	if datetimeStr == "" {
 		return nil, errors.New("bad format")
 	}
@@ -576,7 +579,7 @@ func getIsuGraphByIsuUUID(_ context.Context, isuUUIDAndData string) (*[]GraphRes
 
 	rows, err := db.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? AND `timestamp` <= ? AND ? <= `timestamp` ORDER BY `timestamp` ASC", jiaIsuUUID, graphDate.Add(time.Hour*24), graphDate)
 	if err != nil {
-		return nil, fmt.Errorf("db error: %v", err)
+		return nil, fmt.Errorf("db error koko: %v", err)
 	}
 
 	for rows.Next() {
