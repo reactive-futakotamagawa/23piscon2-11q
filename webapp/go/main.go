@@ -1234,18 +1234,20 @@ func getIsuGraph(c echo.Context) error {
 	}
 
 	resPointer, err := isuGraphByIsuUUID.Get(context.Background(), jiaIsuUUID+datetimeStr)
-	fmt.Println(err.Error())
-	if err.Error() == "bad format" {
-		return c.String(http.StatusBadRequest, "bad format: datetime")
-	}
 	if err != nil {
+		if err.Error() == "bad format" {
+			return c.String(http.StatusBadRequest, "bad format: datetime")
+		}
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.String(http.StatusNotFound, "not found: isu")
+		}
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if resPointer == nil {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
-	
+
 	res := *resPointer
 	//res, err := generateIsuGraphResponse(jiaIsuUUID, date)
 	//if err != nil {
