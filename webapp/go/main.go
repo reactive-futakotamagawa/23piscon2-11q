@@ -1234,7 +1234,8 @@ func getIsuGraph(c echo.Context) error {
 	}
 
 	resPointer, err := isuGraphByIsuUUID.Get(context.Background(), jiaIsuUUID+datetimeStr)
-	if errors.Is(err, errors.New("bad format")) {
+	fmt.Println(err.Error())
+	if err.Error() == "bad format" {
 		return c.String(http.StatusBadRequest, "bad format: datetime")
 	}
 	if err != nil {
