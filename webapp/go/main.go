@@ -591,12 +591,6 @@ func (c *IsuCache) GetAll() []Isu {
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
-	go func() {
-		if _, err := http.Get("http://p.isucon.ikura-hamu.work/api/group/collect"); err != nil {
-			log.Printf("failed to communicate with pprotein: %v", err)
-		}
-	}()
-
 	if os.Getenv("SERVER_ID") == "3" {
 		fmt.Println("Cache Purged")
 		isuConditionCacheByIsuUUID.Purge()
@@ -607,6 +601,12 @@ func postInitialize(c echo.Context) error {
 			Language: "go",
 		})
 	}
+
+	go func() {
+		if _, err := http.Get("http://p.isucon.ikura-hamu.work/api/group/collect"); err != nil {
+			log.Printf("failed to communicate with pprotein: %v", err)
+		}
+	}()
 
 	var request InitializeRequest
 	err := c.Bind(&request)
