@@ -603,7 +603,7 @@ func postInitialize(c echo.Context) error {
 	reciver_err := make(chan error)
 	go func() {
 		defer close(reciver_err)
-		req, err := http.NewRequest(http.MethodPost, "http://18.183.132.40/initialize", bytes.NewBuffer([]byte{}))
+		req, err := http.NewRequest(http.MethodPost, "http://172.31.38.18/initialize", bytes.NewBuffer([]byte{}))
 		if err != nil {
 			reciver_err <- err
 			return
