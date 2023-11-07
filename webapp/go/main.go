@@ -302,7 +302,7 @@ func updateTrend() {
 		var characterCriticalIsuConditions []*TrendCondition
 		for _, isu := range isuLists {
 			//isuLastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
-			var isuLastCondition *IsuCondition
+			var isuLastCondition IsuCondition
 			err := db.Get(&isuLastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isu.JIAIsuUUID)
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
