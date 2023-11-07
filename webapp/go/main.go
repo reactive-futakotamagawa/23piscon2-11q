@@ -413,11 +413,11 @@ func main() {
 		e.Logger.Fatalf("failed to create cache: %v", err)
 		return
 	}
-	isuByIsuUUID, err = sc.New[string, *Isu](getIsuByIsuUUID, time.Minute, time.Minute)
-	if err != nil {
-		e.Logger.Fatalf("failed to create cache: %v", err)
-		return
-	}
+	//cacheIsu, err = sc.New[string, *Isu](cacheIsuGet, time.Minute, time.Minute)
+	//if err != nil {
+	//	e.Logger.Fatalf("failed to create cache: %v", err)
+	//	return
+	//}
 
 	isuCache = IsuCache{Isu: make(map[string]Isu)}
 
@@ -541,9 +541,9 @@ func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
 	return &count, nil
 }
 
-var isuByIsuUUID *sc.Cache[string, *Isu]
+var cacheIsu = sc.NewMust[string, *Isu](cacheIsuGet, 300*time.Hour, 300*time.Hour)
 
-func getIsuByIsuUUID(_ context.Context, isuUUID string) (*Isu, error) {
+func cacheIsuGet(_ context.Context, isuUUID string) (*Isu, error) {
 	var isu Isu
 	err := db.Get(&isu, "SELECT * FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
 	if err != nil {
@@ -590,7 +590,7 @@ func postInitialize(c echo.Context) error {
 		fmt.Println("Cache Purged")
 		isuConditionCacheByIsuUUID.Purge()
 		isuCountByIsuUUID.Purge()
-		isuByIsuUUID.Purge()
+		cacheIsu.Purge()
 
 		return c.JSON(http.StatusOK, InitializeResponse{
 			Language: "go",
@@ -646,7 +646,7 @@ func postInitialize(c echo.Context) error {
 
 	isuConditionCacheByIsuUUID.Purge()
 	isuCountByIsuUUID.Purge()
-	isuByIsuUUID.Purge()
+	cacheIsu.Purge()
 
 	_, err = db.Exec("ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT ''")
 	if err != nil {
@@ -1007,7 +1007,7 @@ func postIsu(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	isuByIsuUUID.Forget(jiaIsuUUID)
+	cacheIsu.Forget(jiaIsuUUID)
 	isuCountByIsuUUID.Forget(jiaIsuUUID)
 	isuCache.Set([]Isu{isu})
 
@@ -1043,7 +1043,7 @@ func getIsuID(c echo.Context) error {
 	//	return c.NoContent(http.StatusInternalServerError)
 	//}
 	var isu *Isu
-	isu, err = isuByIsuUUID.Get(context.Background(), jiaIsuUUID)
+	isu, err = cacheIsu.Get(context.Background(), jiaIsuUUID)
 	//err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 	//	jiaUserID, jiaIsuUUID)
 	if err != nil {
@@ -1078,7 +1078,7 @@ func getIsuIcon(c echo.Context) error {
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
 	var isu *Isu
-	isu, err = isuByIsuUUID.Get(context.Background(), jiaIsuUUID)
+	isu, err = cacheIsu.Get(context.Background(), jiaIsuUUID)
 	//err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 	//	jiaUserID, jiaIsuUUID)
 	if err != nil {
@@ -1140,7 +1140,7 @@ func getIsuGraph(c echo.Context) error {
 	//	return c.String(http.StatusNotFound, "not found: isu")
 	//}
 
-	isu, err := isuByIsuUUID.Get(context.Background(), jiaIsuUUID)
+	isu, err := cacheIsu.Get(context.Background(), jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return c.String(http.StatusNotFound, "not found: isu")
@@ -1375,7 +1375,7 @@ func getIsuConditions(c echo.Context) error {
 	}
 
 	var isuName string
-	isu, err := isuByIsuUUID.Get(context.Background(), jiaIsuUUID)
+	isu, err := cacheIsu.Get(context.Background(), jiaIsuUUID)
 	//err = db.Get(&isuName,
 	//	"SELECT name FROM `isu` WHERE `jia_isu_uuid` = ? AND `jia_user_id` = ? LIMIT 1",
 	//	jiaIsuUUID, jiaUserID,
