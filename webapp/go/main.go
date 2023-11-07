@@ -583,10 +583,6 @@ func postInitialize(c echo.Context) error {
 		}
 	}()
 
-	fmt.Println("Initialize Requested")
-	fmt.Println(os.Getenv("SERVER_ID"))
-	fmt.Println("3" == os.Getenv("SERVER_ID"))
-
 	if os.Getenv("SERVER_ID") == "3" {
 		fmt.Println("Cache Purged")
 		isuConditionCacheByIsuUUID.Purge()
