@@ -583,6 +583,10 @@ func postInitialize(c echo.Context) error {
 		}
 	}()
 
+	fmt.Println("Initialize Requested")
+	fmt.Println(os.Getenv("SERVER_ID"))
+	fmt.Println("3" == os.Getenv("SERVER_ID"))
+
 	if os.Getenv("SERVER_ID") == "3" {
 		fmt.Println("Cache Purged")
 		isuConditionCacheByIsuUUID.Purge()
@@ -602,6 +606,7 @@ func postInitialize(c echo.Context) error {
 
 	reciver_err := make(chan error)
 	go func() {
+		fmt.Println("Initialize Requested to s3")
 		defer close(reciver_err)
 		req, err := http.NewRequest(http.MethodPost, "http://172.31.38.18/initialize", bytes.NewBuffer([]byte{}))
 		if err != nil {
