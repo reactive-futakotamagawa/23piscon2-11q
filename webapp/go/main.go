@@ -301,7 +301,9 @@ func updateTrend() {
 		var characterWarningIsuConditions []*TrendCondition
 		var characterCriticalIsuConditions []*TrendCondition
 		for _, isu := range isuLists {
-			isuLastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+			//isuLastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+			var isuLastCondition *IsuCondition
+			err := db.Get(&isuLastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isu.JIAIsuUUID)
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
 			}
@@ -821,7 +823,9 @@ func getIsuList(c echo.Context) error {
 		foundLastCondition := true
 		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
 		// 	isu.JIAIsuUUID)
-		lastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+		//lastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+		var isuLastCondition IsuCondition
+		err = db.Get(&isuLastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isu.JIAIsuUUID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				foundLastCondition = false
@@ -1521,7 +1525,6 @@ func postIsuCondition(c echo.Context) error {
 	//}
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
-	fmt.Printf("PostIsuCondition: %s\n", jiaIsuUUID)
 	if jiaIsuUUID == "" {
 		return c.String(http.StatusBadRequest, "missing: jia_isu_uuid")
 	}
@@ -1570,6 +1573,8 @@ func postIsuCondition(c echo.Context) error {
 		}
 		postIsuConditionRequests = append(postIsuConditionRequests, appendRequest)
 	}
+
+	fmt.Println("PostIsuCondition Success: ", postIsuConditionRequests)
 
 	return c.NoContent(http.StatusAccepted)
 }
