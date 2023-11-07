@@ -251,6 +251,7 @@ func doPostIsuCondition() {
 	if err != nil {
 		fmt.Printf("db error: %v", err)
 	}
+	fmt.Println("PostIsuCondition Success")
 	// query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
 	// for i, cond := range doRequest {
 	// 	timestamp := time.Unix(cond.Timestamp, 0)
@@ -883,6 +884,7 @@ func postIsu(c echo.Context) error {
 	useDefaultImage := false
 
 	jiaIsuUUID := c.FormValue("jia_isu_uuid")
+	fmt.Printf("PostIsu: %v\n", jiaIsuUUID)
 	isuName := c.FormValue("isu_name")
 	fh, err := c.FormFile("image")
 	if err != nil {
@@ -1004,6 +1006,8 @@ func postIsu(c echo.Context) error {
 	isuByIsuUUID.Forget(jiaIsuUUID)
 	isuCountByIsuUUID.Forget(jiaIsuUUID)
 	isuCache.Set([]Isu{isu})
+
+	fmt.Printf("PostIsu Success: %v\n", jiaIsuUUID)
 
 	return c.JSON(http.StatusCreated, isu)
 }
@@ -1517,6 +1521,7 @@ func postIsuCondition(c echo.Context) error {
 	//}
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
+	fmt.Printf("PostIsuCondition: %s\n", jiaIsuUUID)
 	if jiaIsuUUID == "" {
 		return c.String(http.StatusBadRequest, "missing: jia_isu_uuid")
 	}
