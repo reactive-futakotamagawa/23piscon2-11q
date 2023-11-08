@@ -663,7 +663,7 @@ var isuConditionCacheByIsuUUID *sc.Cache[string, *IsuCondition]
 
 func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition, error) {
 	var condition IsuCondition
-	err := db.Get(&condition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isuUUID)
+	err := dbGet(&condition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isuUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -675,7 +675,7 @@ var notFound = errors.New("not found")
 
 func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
 	var count int
-	err := db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
+	err := dbGet(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -692,7 +692,7 @@ var cacheIsu = sc.NewMust[string, *Isu](cacheIsuGet, 300*time.Hour, 300*time.Hou
 
 func cacheIsuGet(_ context.Context, isuUUID string) (*Isu, error) {
 	var isu Isu
-	err := db.Get(&isu, "SELECT * FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
+	err := dbGet(&isu, "SELECT * FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
 	if err != nil {
 		return nil, err
 	}
