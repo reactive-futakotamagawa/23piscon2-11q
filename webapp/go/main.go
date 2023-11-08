@@ -1362,6 +1362,7 @@ func calculateGraphDataPoint(isuConditions []IsuCondition) (GraphDataPoint, erro
 		badConditionsCount := 0
 
 		if !isValidConditionFormat(condition.Condition) {
+			fmt.Println("bad14")
 			return GraphDataPoint{}, fmt.Errorf("invalid condition format")
 		}
 
@@ -1423,21 +1424,25 @@ func getIsuConditions(c echo.Context) error {
 		}
 
 		c.Logger().Error(err)
+		fmt.Println("bad20")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 	if jiaIsuUUID == "" {
+		fmt.Println("bad21")
 		return c.String(http.StatusBadRequest, "missing: jia_isu_uuid")
 	}
 
 	endTimeInt64, err := strconv.ParseInt(c.QueryParam("end_time"), 10, 64)
 	if err != nil {
+		fmt.Println("bad22")
 		return c.String(http.StatusBadRequest, "bad format: end_time")
 	}
 	endTime := time.Unix(endTimeInt64, 0)
 	conditionLevelCSV := c.QueryParam("condition_level")
 	if conditionLevelCSV == "" {
+		fmt.Println("bad23")
 		return c.String(http.StatusBadRequest, "missing: condition_level")
 	}
 	conditionLevel := map[string]interface{}{}
@@ -1450,6 +1455,7 @@ func getIsuConditions(c echo.Context) error {
 	if startTimeStr != "" {
 		startTimeInt64, err := strconv.ParseInt(startTimeStr, 10, 64)
 		if err != nil {
+			fmt.Println("bad24")
 			return c.String(http.StatusBadRequest, "bad format: start_time")
 		}
 		startTime = time.Unix(startTimeInt64, 0)
@@ -1463,13 +1469,16 @@ func getIsuConditions(c echo.Context) error {
 	//)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("bad25")
 			return c.String(http.StatusNotFound, "not found: isu")
 		}
 
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad26")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if isu.JIAUserID != jiaUserID {
+		fmt.Println("bad27")
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 	isuName = isu.Name
@@ -1477,6 +1486,7 @@ func getIsuConditions(c echo.Context) error {
 	conditionsResponse, err := getIsuConditionsFromDB(db, jiaIsuUUID, endTime, conditionLevel, startTime, conditionLimit, isuName)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad28")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -1568,6 +1578,7 @@ func calculateConditionLevel(condition string) (string, error) {
 	case 3:
 		conditionLevel = conditionLevelCritical
 	default:
+		fmt.Println("bad29")
 		return "", fmt.Errorf("unexpected warn count")
 	}
 
