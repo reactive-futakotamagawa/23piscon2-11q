@@ -231,6 +231,7 @@ func doPostIsuCondition() {
 	if len(postIsuConditionRequests) == 0 {
 		return
 	}
+	fmt.Println("doPostLock Locked")
 	doPostLock.Lock()
 	doRequest := make([]PostIsuConditionRequests, len(postIsuConditionRequests))
 	copy(doRequest, postIsuConditionRequests)
@@ -250,12 +251,14 @@ func doPostIsuCondition() {
 		isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
 	}
 
+	fmt.Println("INSERT POST ISU CONDITION")
 	_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message, :condition_level)", args)
 	if err != nil {
 		fmt.Printf("db error post isu condition: %v", err)
 	}
 	fmt.Println("PostIsuCondition Success")
 	doPostLock.Unlock()
+	fmt.Println("doPostLock UnLocked")
 	// query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
 	// for i, cond := range doRequest {
 	// 	timestamp := time.Unix(cond.Timestamp, 0)
