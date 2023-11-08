@@ -528,8 +528,10 @@ func main() {
 	}
 
 	if getEnv("USE_SOCKET", "0") == "1" {
+		fmt.Println("USE_SOCKET")
+
 		// ここからソケット接続設定 ---
-		socket_file := "/tmp/app.sock"
+		socket_file := "/var/app.sock"
 		os.Remove(socket_file)
 
 		l, err := net.Listen("unix", socket_file)
@@ -547,6 +549,8 @@ func main() {
 		e.Logger.Fatal(e.Start(""))
 		// ここまで ---
 	} else {
+		fmt.Println("USE_TCP")
+
 		serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
 		e.Logger.Fatal(e.Start(serverPort))
 	}
