@@ -540,10 +540,10 @@ func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
 	var count int
 	err := db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", isuUUID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return &count, nil
+		return nil, err
 	}
 	if err != nil {
-		return &count, err
+		return nil, err
 	}
 	return &count, nil
 }
@@ -1562,12 +1562,16 @@ func postIsuCondition(c echo.Context) error {
 	// default: tx
 	count, err = isuCountByIsuUUID.Get(context.Background(), jiaIsuUUID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("bad6")
+			return c.String(http.StatusNotFound, "not found: isu")
+		}
 		fmt.Println("bad5")
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if *count == 0 {
-		fmt.Println("bad6")
+		fmt.Println("bad7")
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
