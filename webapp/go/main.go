@@ -610,9 +610,9 @@ func getUserIDFromSession(c echo.Context) (string, int, error) {
 	return jiaUserID, 0, nil
 }
 
-func getJIAServiceURL(tx *sqlx.Tx) string {
+func getJIAServiceURL() string {
 	var config Config
-	err := tx.Get(&config, "SELECT * FROM `isu_association_config` WHERE `name` = ?", "jia_service_url")
+	err := dbGet(&config, "SELECT * FROM `isu_association_config` WHERE `name` = ?", "jia_service_url")
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			log.Print(err)
@@ -1175,14 +1175,14 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		fmt.Println("bad56")
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec("INSERT INTO `isu` (`jia_isu_uuid`, `name`, `jia_user_id`) VALUES (?, ?, ?)",
+	//tx, err := db.Beginx()
+	//if err != nil {
+	//	c.Logger().Errorf("db error: %v", err)
+	//	fmt.Println("bad56")
+	//	return c.NoContent(http.StatusInternalServerError)
+	//}
+	//defer tx.Rollback()
+	_, err = dbExec("INSERT INTO `isu` (`jia_isu_uuid`, `name`, `jia_user_id`) VALUES (?, ?, ?)",
 		jiaIsuUUID, isuName, jiaUserID)
 	if err != nil {
 		mysqlErr, ok := err.(*mysql.MySQLError)
@@ -1196,7 +1196,7 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	targetURL := getJIAServiceURL(tx) + "/api/activate"
+	targetURL := getJIAServiceURL() + "/api/activate"
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
@@ -1242,33 +1242,50 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, err = tx.Exec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
+	_, err = dbExec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		fmt.Println("bad64")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	cacheGetIsuList.Forget(jiaUserID)
+	cacheIsu.Forget(jiaIsuUUID)
+	isuCountByIsuUUID.Forget(jiaIsuUUID)
+
 	var isu Isu
-	err = tx.Get(
-		&isu,
-		"SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
-		jiaUserID, jiaIsuUUID)
+	//err = dbGet(
+	//	&isu,
+	//	"SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+	//	jiaUserID, jiaIsuUUID)
+	//if err != nil {
+	//	c.Logger().Errorf("db error: %v", err)
+	//	fmt.Println("bad65")
+	//	return c.NoContent(http.StatusInternalServerError)
+	//}
+	isuPointer, err := cacheIsu.Get(context.Background(), jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		fmt.Println("bad65")
 		return c.NoContent(http.StatusInternalServerError)
 	}
-
-	err = tx.Commit()
-	if err != nil {
+	if isuPointer != nil {
 		c.Logger().Errorf("db error: %v", err)
-		fmt.Println("bad66")
+		fmt.Println("bad65")
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	cacheGetIsuList.Forget(jiaUserID)
-	cacheIsu.Forget(jiaIsuUUID)
-	isuCountByIsuUUID.Forget(jiaIsuUUID)
+	if isuPointer.JIAUserID != jiaUserID {
+		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad65")
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	//err = tx.Commit()
+	//if err != nil {
+	//	c.Logger().Errorf("db error: %v", err)
+	//	fmt.Println("bad66")
+	//	return c.NoContent(http.StatusInternalServerError)
+	//}
+
 	isuCache.Set([]Isu{isu})
 
 	//fmt.Printf("PostIsu Success: %v\n", jiaIsuUUID)
