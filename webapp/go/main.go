@@ -1236,7 +1236,7 @@ func postIsu(c echo.Context) error {
 	//fmt.Printf("PostIsu Success: %v\n", jiaIsuUUID)
 
 	//return c.JSON(http.StatusCreated, isu)
-	return c.JSONBlob(http.StatusOK, jsonEncode(isu))
+	return c.JSONBlob(http.StatusCreated, jsonEncode(isu))
 }
 
 // GET /api/isu/:jia_isu_uuid
