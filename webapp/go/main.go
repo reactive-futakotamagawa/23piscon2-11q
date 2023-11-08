@@ -1627,44 +1627,71 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 	var conditions []GetIsuCondition
 	var err error
 
-	conditionLevelQuery := ""
-	moreThanOne := false
-	if _, ok := conditionLevel[conditionLevelInfo]; ok {
-		conditionLevelQuery += "'" + conditionLevelInfo + "'"
-		moreThanOne = true
-	}
-	if _, ok := conditionLevel[conditionLevelWarning]; ok {
-		if moreThanOne {
-			conditionLevelQuery += ","
+	var allConditionLevel bool
+	if _, ok1 := conditionLevel[conditionLevelInfo]; ok1 {
+		if _, ok2 := conditionLevel[conditionLevelWarning]; ok2 {
+			if _, ok3 := conditionLevel[conditionLevelCritical]; ok3 {
+				allConditionLevel = true
+			}
 		}
-		conditionLevelQuery += "'" + conditionLevelWarning + "'"
-		moreThanOne = true
 	}
-	if _, ok := conditionLevel[conditionLevelCritical]; ok {
-		if moreThanOne {
-			conditionLevelQuery += ","
+	if allConditionLevel {
+		if startTime.IsZero() {
+			err = db.Select(&conditions,
+				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+					"	AND `timestamp` < ?"+
+					"	ORDER BY `timestamp` DESC LIMIT ?",
+				jiaIsuUUID, endTime, limit,
+			)
+		} else {
+			err = db.Select(&conditions,
+				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+					"	AND `timestamp` < ?"+
+					"	AND ? <= `timestamp`"+
+					"	ORDER BY `timestamp` DESC LIMIT ?",
+				jiaIsuUUID, endTime, startTime, limit,
+			)
 		}
-		conditionLevelQuery += "'" + conditionLevelCritical + "'"
-		moreThanOne = true
-	}
-
-	if startTime.IsZero() {
-		err = db.Select(&conditions,
-			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
-				"	AND `timestamp` < ?"+
-				"   AND `condition_level` IN ("+conditionLevelQuery+")"+
-				"	ORDER BY `timestamp` DESC LIMIT ?",
-			jiaIsuUUID, endTime, limit,
-		)
 	} else {
-		err = db.Select(&conditions,
-			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
-				"	AND `timestamp` < ?"+
-				"	AND ? <= `timestamp`"+
-				"   AND `condition_level` IN ("+conditionLevelQuery+")"+
-				"	ORDER BY `timestamp` DESC LIMIT ?",
-			jiaIsuUUID, endTime, startTime, limit,
-		)
+		conditionLevelQuery := ""
+		moreThanOne := false
+		if _, ok := conditionLevel[conditionLevelInfo]; ok {
+			conditionLevelQuery += "'" + conditionLevelInfo + "'"
+			moreThanOne = true
+		}
+		if _, ok := conditionLevel[conditionLevelWarning]; ok {
+			if moreThanOne {
+				conditionLevelQuery += ","
+			}
+			conditionLevelQuery += "'" + conditionLevelWarning + "'"
+			moreThanOne = true
+		}
+		if _, ok := conditionLevel[conditionLevelCritical]; ok {
+			if moreThanOne {
+				conditionLevelQuery += ","
+			}
+			conditionLevelQuery += "'" + conditionLevelCritical + "'"
+			moreThanOne = true
+		}
+
+		if startTime.IsZero() {
+			err = db.Select(&conditions,
+				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+					"	AND `timestamp` < ?"+
+					"   AND `condition_level` IN ("+conditionLevelQuery+")"+
+					"	ORDER BY `timestamp` DESC LIMIT ?",
+				jiaIsuUUID, endTime, limit,
+			)
+		} else {
+			err = db.Select(&conditions,
+				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+					"	AND `timestamp` < ?"+
+					"	AND ? <= `timestamp`"+
+					"   AND `condition_level` IN ("+conditionLevelQuery+")"+
+					"	ORDER BY `timestamp` DESC LIMIT ?",
+				jiaIsuUUID, endTime, startTime, limit,
+			)
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
