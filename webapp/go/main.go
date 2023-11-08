@@ -1534,17 +1534,21 @@ func postIsuCondition(c echo.Context) error {
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 	if jiaIsuUUID == "" {
+		fmt.Println("bad1")
 		return c.String(http.StatusBadRequest, "missing: jia_isu_uuid")
 	}
 	var req []PostIsuConditionRequest
 	err := c.Bind(&req)
 	if err != nil {
+		fmt.Println("bad2")
 		return c.String(http.StatusBadRequest, "bad request body")
 	} else if len(req) == 0 {
+		fmt.Println("bad3")
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
 	for _, cond := range req {
 		if !isValidConditionFormat(cond.Condition) {
+			fmt.Println("bad4")
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 	}
@@ -1558,16 +1562,19 @@ func postIsuCondition(c echo.Context) error {
 	// default: tx
 	count, err = isuCountByIsuUUID.Get(context.Background(), jiaIsuUUID)
 	if err != nil {
+		fmt.Println("bad5")
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if *count == 0 {
+		fmt.Println("bad6")
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
 	for _, r := range req {
 		conditionLevel, err := calculateConditionLevel(r.Condition)
 		if err != nil {
+			fmt.Println("bad7")
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
