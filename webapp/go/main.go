@@ -529,7 +529,7 @@ func main() {
 
 	if getEnv("USE_SOCKET", "0") == "1" {
 		// ここからソケット接続設定 ---
-		socket_file := "/var/run/app.sock"
+		socket_file := "/tmp/app.sock"
 		os.Remove(socket_file)
 
 		l, err := net.Listen("unix", socket_file)
