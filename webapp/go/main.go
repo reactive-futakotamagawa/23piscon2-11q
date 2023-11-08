@@ -1254,12 +1254,14 @@ func generateIsuGraphResponse(jiaIsuUUID string, graphDate time.Time) ([]GraphRe
 
 	rows, err := db.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? AND `timestamp` <= ? AND ? <= `timestamp` ORDER BY `timestamp` ASC", jiaIsuUUID, graphDate.Add(time.Hour*24), graphDate)
 	if err != nil {
+		fmt.Println("bad10")
 		return nil, fmt.Errorf("db error: %v", err)
 	}
 
 	for rows.Next() {
 		err = rows.StructScan(&condition)
 		if err != nil {
+			fmt.Println("bad11")
 			return nil, err
 		}
 
@@ -1268,6 +1270,7 @@ func generateIsuGraphResponse(jiaIsuUUID string, graphDate time.Time) ([]GraphRe
 			if len(conditionsInThisHour) > 0 {
 				data, err := calculateGraphDataPoint(conditionsInThisHour)
 				if err != nil {
+					fmt.Println("bad12")
 					return nil, err
 				}
 
@@ -1290,6 +1293,7 @@ func generateIsuGraphResponse(jiaIsuUUID string, graphDate time.Time) ([]GraphRe
 	if len(conditionsInThisHour) > 0 {
 		data, err := calculateGraphDataPoint(conditionsInThisHour)
 		if err != nil {
+			fmt.Println("bad13")
 			return nil, err
 		}
 
