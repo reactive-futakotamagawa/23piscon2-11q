@@ -535,6 +535,7 @@ func getIsuConditionsByIsuUUID(_ context.Context, isuUUID string) (*IsuCondition
 }
 
 var isuCountByIsuUUID *sc.Cache[string, *int]
+var notFound = errors.New("not found")
 
 func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
 	var count int
@@ -544,6 +545,9 @@ func getIsuCountByIsuUUID(_ context.Context, isuUUID string) (*int, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+	if count == 0 {
+		return nil, notFound
 	}
 	return &count, nil
 }
@@ -1564,6 +1568,10 @@ func postIsuCondition(c echo.Context) error {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			fmt.Println("bad6")
+			return c.String(http.StatusNotFound, "not found: isu")
+		}
+		if errors.Is(err, notFound) {
+			fmt.Println("bad8")
 			return c.String(http.StatusNotFound, "not found: isu")
 		}
 		fmt.Println("bad5")
