@@ -864,7 +864,7 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, err = db.Exec(
+	_, err = dbExec(
 		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
 		"jia_service_url",
 		request.JIAServiceURL,
@@ -878,15 +878,15 @@ func postInitialize(c echo.Context) error {
 	isuCountByIsuUUID.Purge()
 	cacheIsu.Purge()
 
-	_, err = db.Exec("ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT ''")
+	_, err = dbExec("ALTER TABLE `isu_condition` ADD COLUMN `condition_level` VARCHAR(255) DEFAULT ''")
 	if err != nil {
 		fmt.Println(err)
 	}
-	_, err = db.Exec("ALTER TABLE `isu_condition` DROP COLUMN `id`;")
+	_, err = dbExec("ALTER TABLE `isu_condition` DROP COLUMN `id`;")
 	if err != nil {
 		fmt.Println(err)
 	}
-	_, err = db.Exec("ALTER TABLE isu DROP COLUMN image;")
+	_, err = dbExec("ALTER TABLE isu DROP COLUMN image;")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -903,7 +903,7 @@ func postInitialize(c echo.Context) error {
 			fmt.Println(err)
 		}
 
-		_, err = db.Exec("UPDATE `isu_condition` SET `condition_level` = ? WHERE `jia_isu_uuid` = ? AND `timestamp` = ?", conditionLevel, condition.JIAIsuUUID, condition.Timestamp)
+		_, err = dbExec("UPDATE `isu_condition` SET `condition_level` = ? WHERE `jia_isu_uuid` = ? AND `timestamp` = ?", conditionLevel, condition.JIAIsuUUID, condition.Timestamp)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -949,7 +949,7 @@ func postAuthentication(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid JWT payload")
 	}
 
-	_, err = db.Exec("INSERT IGNORE INTO user (`jia_user_id`) VALUES (?)", jiaUserID)
+	_, err = dbExec("INSERT IGNORE INTO user (`jia_user_id`) VALUES (?)", jiaUserID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
