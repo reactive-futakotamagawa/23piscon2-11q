@@ -231,7 +231,7 @@ func doPostIsuCondition() {
 	if len(postIsuConditionRequests) == 0 {
 		return
 	}
-	fmt.Println("doPostLock Locked")
+	//fmt.Println("doPostLock Locked")
 	doPostLock.Lock()
 	doRequest := make([]PostIsuConditionRequests, len(postIsuConditionRequests))
 	copy(doRequest, postIsuConditionRequests)
@@ -251,14 +251,14 @@ func doPostIsuCondition() {
 		isuConditionCacheByIsuUUID.Forget(cond.JiaIsuUUID)
 	}
 
-	fmt.Println("INSERT POST ISU CONDITION")
+	//fmt.Println("INSERT POST ISU CONDITION")
 	_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message, :condition_level)", args)
 	if err != nil {
 		fmt.Printf("db error post isu condition: %v", err)
 	}
 	fmt.Printf("PostIsuCondition Inserted %v\n", len(doRequest))
 	doPostLock.Unlock()
-	fmt.Println("doPostLock UnLocked")
+	//fmt.Println("doPostLock UnLocked")
 	// query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
 	// for i, cond := range doRequest {
 	// 	timestamp := time.Unix(cond.Timestamp, 0)
@@ -926,7 +926,7 @@ func postIsu(c echo.Context) error {
 	useDefaultImage := false
 
 	jiaIsuUUID := c.FormValue("jia_isu_uuid")
-	fmt.Printf("PostIsu: %v\n", jiaIsuUUID)
+	//fmt.Printf("PostIsu: %v\n", jiaIsuUUID)
 	isuName := c.FormValue("isu_name")
 	fh, err := c.FormFile("image")
 	if err != nil {
@@ -1050,7 +1050,7 @@ func postIsu(c echo.Context) error {
 	isuCountByIsuUUID.Forget(jiaIsuUUID)
 	isuCache.Set([]Isu{isu})
 
-	fmt.Printf("PostIsu Success: %v\n", jiaIsuUUID)
+	//fmt.Printf("PostIsu Success: %v\n", jiaIsuUUID)
 
 	return c.JSON(http.StatusCreated, isu)
 }
@@ -1374,7 +1374,7 @@ func calculateGraphDataPoint(isuConditions []IsuCondition) (GraphDataPoint, erro
 // GET /api/condition/:jia_isu_uuid
 // ISUのコンディションを取得
 func getIsuConditions(c echo.Context) error {
-	fmt.Println("getIsuConditions Requested")
+	//fmt.Println("getIsuConditions Requested")
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -1439,7 +1439,7 @@ func getIsuConditions(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	fmt.Println("getIsuConditions Success")
+	//fmt.Println("getIsuConditions Success")
 	return c.JSON(http.StatusOK, conditionsResponse)
 }
 
@@ -1559,7 +1559,7 @@ var postIsuConditionRequests []PostIsuConditionRequests
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
-	fmt.Println("PostIsuCondition Requested")
+	//fmt.Println("PostIsuCondition Requested")
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
 	//dropProbability := 0.0
 	//if rand.Float64() <= dropProbability {
@@ -1633,7 +1633,7 @@ func postIsuCondition(c echo.Context) error {
 	}
 
 	//fmt.Println("PostIsuCondition Success: ", postIsuConditionRequests)
-	fmt.Printf("PostIsuCondition Success: %v\n", len(postIsuConditionRequests))
+	//fmt.Printf("PostIsuCondition Success: %v\n", len(postIsuConditionRequests))
 	return c.NoContent(http.StatusAccepted)
 }
 
