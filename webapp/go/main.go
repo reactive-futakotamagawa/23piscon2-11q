@@ -832,8 +832,7 @@ func getIsuList(c echo.Context) error {
 	for _, isu := range isuList {
 		var lastCondition IsuCondition
 		foundLastCondition := true
-		err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-			isu.JIAIsuUUID)
+		lastConditionPointer, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				foundLastCondition = false
@@ -842,6 +841,22 @@ func getIsuList(c echo.Context) error {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 		}
+		if lastConditionPointer == nil {
+			foundLastCondition = false
+		} else {
+			lastCondition = *lastConditionPointer
+		}
+
+		//err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+		//	isu.JIAIsuUUID)
+		//if err != nil {
+		//	if errors.Is(err, sql.ErrNoRows) {
+		//		foundLastCondition = false
+		//	} else {
+		//		c.Logger().Errorf("db error: %v", err)
+		//		return c.NoContent(http.StatusInternalServerError)
+		//	}
+		//}
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {
