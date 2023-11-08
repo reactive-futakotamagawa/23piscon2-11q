@@ -1339,6 +1339,7 @@ func calculateGraphDataPoint(isuConditions []IsuCondition) (GraphDataPoint, erro
 // GET /api/condition/:jia_isu_uuid
 // ISUのコンディションを取得
 func getIsuConditions(c echo.Context) error {
+	fmt.Println("getIsuConditions Requested")
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -1402,6 +1403,8 @@ func getIsuConditions(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	fmt.Println("getIsuConditions Success")
 	return c.JSON(http.StatusOK, conditionsResponse)
 }
 
@@ -1521,6 +1524,7 @@ var postIsuConditionRequests []PostIsuConditionRequests
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
+	fmt.Println("PostIsuCondition Requested")
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
 	//dropProbability := 0.0
 	//if rand.Float64() <= dropProbability {
@@ -1579,7 +1583,7 @@ func postIsuCondition(c echo.Context) error {
 	}
 
 	//fmt.Println("PostIsuCondition Success: ", postIsuConditionRequests)
-
+	fmt.Printf("PostIsuCondition Success: %v\n", len(postIsuConditionRequests))
 	return c.NoContent(http.StatusAccepted)
 }
 
