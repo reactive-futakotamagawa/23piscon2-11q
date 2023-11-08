@@ -326,6 +326,7 @@ func forgetIsuConditionCacheByIsuUUID(c echo.Context) error {
 
 	fmt.Printf("Forget %v\n", len(p.UUIDs))
 	for _, uuid := range p.UUIDs {
+		cacheGetIsuList.Forget(uuid)
 		isuConditionCacheByIsuUUID.Forget(uuid)
 	}
 
@@ -1131,7 +1132,6 @@ func postIsu(c echo.Context) error {
 		fmt.Println("bad66")
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
 	cacheGetIsuList.Forget(jiaUserID)
 	cacheIsu.Forget(jiaIsuUUID)
 	isuCountByIsuUUID.Forget(jiaIsuUUID)
