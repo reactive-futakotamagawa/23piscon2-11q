@@ -347,7 +347,7 @@ func updateTrend() {
 	var isuList []Isu
 	isuList = isuCache.GetAll()
 	if len(isuList) == 0 || isuList == nil {
-		err := db.Select(&isuList, "SELECT * FROM `isu`")
+		err := dbSelect(&isuList, "SELECT * FROM `isu`")
 		if errors.Is(err, sql.ErrNoRows) {
 			fmt.Println("no rows tickerGetTrend")
 			return
@@ -892,7 +892,7 @@ func postInitialize(c echo.Context) error {
 	}
 
 	var conditions []IsuCondition
-	err = db.Select(&conditions, "SELECT * FROM `isu_condition`")
+	err = dbSelect(&conditions, "SELECT * FROM `isu_condition`")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -1717,14 +1717,14 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 	}
 	if allConditionLevel {
 		if startTime.IsZero() {
-			err = db.Select(&conditions,
+			err = dbSelect(&conditions,
 				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 					"	AND `timestamp` < ?"+
 					"	ORDER BY `timestamp` DESC LIMIT ?",
 				jiaIsuUUID, endTime, limit,
 			)
 		} else {
-			err = db.Select(&conditions,
+			err = dbSelect(&conditions,
 				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 					"	AND `timestamp` < ?"+
 					"	AND ? <= `timestamp`"+
@@ -1755,7 +1755,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 		}
 
 		if startTime.IsZero() {
-			err = db.Select(&conditions,
+			err = dbSelect(&conditions,
 				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 					"	AND `timestamp` < ?"+
 					"   AND `condition_level` IN ("+conditionLevelQuery+")"+
@@ -1763,7 +1763,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 				jiaIsuUUID, endTime, limit,
 			)
 		} else {
-			err = db.Select(&conditions,
+			err = dbSelect(&conditions,
 				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 					"	AND `timestamp` < ?"+
 					"	AND ? <= `timestamp`"+
