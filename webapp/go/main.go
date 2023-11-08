@@ -1045,6 +1045,7 @@ func postIsu(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	cacheGetIsuList.Forget(jiaUserID)
 	cacheIsu.Forget(jiaIsuUUID)
 	isuCountByIsuUUID.Forget(jiaIsuUUID)
 	isuCache.Set([]Isu{isu})
