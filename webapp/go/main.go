@@ -1172,20 +1172,24 @@ func getIsuGraph(c echo.Context) error {
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
+			fmt.Println("bad90")
 			return c.String(http.StatusUnauthorized, "you are not signed in")
 		}
 
 		c.Logger().Error(err)
+		fmt.Println("bad91")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 	datetimeStr := c.QueryParam("datetime")
 	if datetimeStr == "" {
+		fmt.Println("bad92")
 		return c.String(http.StatusBadRequest, "missing: datetime")
 	}
 	datetimeInt64, err := strconv.ParseInt(datetimeStr, 10, 64)
 	if err != nil {
+		fmt.Println("bad93")
 		return c.String(http.StatusBadRequest, "bad format: datetime")
 	}
 	date := time.Unix(datetimeInt64, 0).Truncate(time.Hour)
@@ -1193,6 +1197,7 @@ func getIsuGraph(c echo.Context) error {
 	//tx, err := db.Beginx()
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad94")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	//defer tx.Rollback()
@@ -1215,6 +1220,7 @@ func getIsuGraph(c echo.Context) error {
 		}
 
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad95")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -1225,11 +1231,13 @@ func getIsuGraph(c echo.Context) error {
 	res, err := generateIsuGraphResponse(jiaIsuUUID, date)
 	if err != nil {
 		c.Logger().Error(err)
+		fmt.Println("bad96")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad97")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
