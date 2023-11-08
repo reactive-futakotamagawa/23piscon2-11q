@@ -225,10 +225,13 @@ func init() {
 	http.DefaultTransport.(*http.Transport).ForceAttemptHTTP2 = true        // go1.13以上
 }
 
+var doPostLock = sync.Mutex{}
+
 func doPostIsuCondition() {
 	if len(postIsuConditionRequests) == 0 {
 		return
 	}
+	doPostLock.Lock()
 	doRequest := make([]PostIsuConditionRequests, len(postIsuConditionRequests))
 	copy(doRequest, postIsuConditionRequests)
 	postIsuConditionRequests = []PostIsuConditionRequests{}
@@ -249,9 +252,10 @@ func doPostIsuCondition() {
 
 	_, err := db.NamedExec("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message, :condition_level)", args)
 	if err != nil {
-		fmt.Printf("db error: %v", err)
+		fmt.Printf("db error post isu condition: %v", err)
 	}
 	fmt.Println("PostIsuCondition Success")
+	doPostLock.Unlock()
 	// query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
 	// for i, cond := range doRequest {
 	// 	timestamp := time.Unix(cond.Timestamp, 0)
@@ -1571,7 +1575,7 @@ func postIsuCondition(c echo.Context) error {
 		postIsuConditionRequests = append(postIsuConditionRequests, appendRequest)
 	}
 
-	fmt.Println("PostIsuCondition Success: ", postIsuConditionRequests)
+	//fmt.Println("PostIsuCondition Success: ", postIsuConditionRequests)
 
 	return c.NoContent(http.StatusAccepted)
 }
