@@ -1078,6 +1078,7 @@ func postIsu(c echo.Context) error {
 		fmt.Println("bad66")
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	isuConditionCacheByIsuUUID.Forget(jiaIsuUUID)
 	cacheGetIsuList.Forget(jiaUserID)
 	cacheIsu.Forget(jiaIsuUUID)
 	isuCountByIsuUUID.Forget(jiaIsuUUID)
