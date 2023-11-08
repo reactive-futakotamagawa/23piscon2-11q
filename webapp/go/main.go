@@ -891,12 +891,14 @@ func getIsuList(c echo.Context) error {
 		}
 
 		c.Logger().Error(err)
+		fmt.Println("bad40")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	responseListPointer, err := cacheGetIsuList.Get(context.Background(), jiaUserID)
 	if err != nil {
 		c.Logger().Error(err)
+		fmt.Println("bad41")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
