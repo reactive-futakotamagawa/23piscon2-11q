@@ -1131,10 +1131,12 @@ func getIsuIcon(c echo.Context) error {
 	jiaUserUUID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
+			fmt.Println("bad80")
 			return c.String(http.StatusUnauthorized, "you are not signed in")
 		}
 
 		c.Logger().Error(err)
+		fmt.Println("bad81")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -1146,12 +1148,15 @@ func getIsuIcon(c echo.Context) error {
 	//	jiaUserID, jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("bad82")
 			return c.String(http.StatusNotFound, "not found: isu")
 		}
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad83")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if isu.JIAUserID != jiaUserUUID {
+		fmt.Println("bad84")
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
