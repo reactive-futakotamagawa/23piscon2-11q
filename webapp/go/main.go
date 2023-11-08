@@ -310,14 +310,28 @@ func updateTrend() {
 		for _, isu := range isuLists {
 			//isuLastCondition, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
 			var isuLastCondition IsuCondition
-			err := db.Get(&isuLastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isu.JIAIsuUUID)
-			if errors.Is(err, sql.ErrNoRows) {
+			lastConditionPointer, err := isuConditionCacheByIsuUUID.Get(context.Background(), isu.JIAIsuUUID)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					continue
+				} else {
+					fmt.Printf("db error get trend: %v", err)
+					return
+				}
+			}
+			if lastConditionPointer == nil {
 				continue
 			}
-			if err != nil {
-				fmt.Printf("db error: %v", err)
-				return
-			}
+			isuLastCondition = *lastConditionPointer
+
+			//err := db.Get(&isuLastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", isu.JIAIsuUUID)
+			//if errors.Is(err, sql.ErrNoRows) {
+			//	continue
+			//}
+			//if err != nil {
+			//	fmt.Printf("db error: %v", err)
+			//	return
+			//}
 
 			conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
 			trendCondition := TrendCondition{
