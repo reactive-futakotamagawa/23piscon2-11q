@@ -922,6 +922,7 @@ func postIsu(c echo.Context) error {
 		}
 
 		c.Logger().Error(err)
+		fmt.Println("bad50")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -933,6 +934,7 @@ func postIsu(c echo.Context) error {
 	fh, err := c.FormFile("image")
 	if err != nil {
 		if !errors.Is(err, http.ErrMissingFile) {
+			fmt.Println("bad51")
 			return c.String(http.StatusBadRequest, "bad format: icon")
 		}
 		useDefaultImage = true
@@ -944,12 +946,14 @@ func postIsu(c echo.Context) error {
 		image, err = ioutil.ReadFile(defaultIconFilePath)
 		if err != nil {
 			c.Logger().Error(err)
+			fmt.Println("bad52")
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	} else {
 		file, err := fh.Open()
 		if err != nil {
 			c.Logger().Error(err)
+			fmt.Println("bad53")
 			return c.NoContent(http.StatusInternalServerError)
 		}
 		defer file.Close()
@@ -957,6 +961,7 @@ func postIsu(c echo.Context) error {
 		image, err = ioutil.ReadAll(file)
 		if err != nil {
 			c.Logger().Error(err)
+			fmt.Println("bad54")
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
@@ -964,12 +969,14 @@ func postIsu(c echo.Context) error {
 	err = os.WriteFile(filepath.Join(isuImagesPath, jiaIsuUUID), image, 0644)
 	if err != nil {
 		c.Logger().Errorf("write image file error: %v", err)
+		fmt.Println("bad55")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	tx, err := db.Beginx()
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad56")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
@@ -983,6 +990,7 @@ func postIsu(c echo.Context) error {
 		}
 
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad57")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -991,12 +999,14 @@ func postIsu(c echo.Context) error {
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
 		c.Logger().Error(err)
+		fmt.Println("bad58")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	reqJIA, err := http.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(bodyJSON))
 	if err != nil {
 		c.Logger().Error(err)
+		fmt.Println("bad59")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -1004,6 +1014,7 @@ func postIsu(c echo.Context) error {
 	res, err := http.DefaultClient.Do(reqJIA)
 	if err != nil {
 		c.Logger().Errorf("failed to request to JIAService: %v", err)
+		fmt.Println("bad60")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer res.Body.Close()
@@ -1011,11 +1022,13 @@ func postIsu(c echo.Context) error {
 	resBody, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		c.Logger().Error(err)
+		fmt.Println("bad61")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	if res.StatusCode != http.StatusAccepted {
 		c.Logger().Errorf("JIAService returned error: status code %v, message: %v", res.StatusCode, string(resBody))
+		fmt.Println("bad62")
 		return c.String(res.StatusCode, "JIAService returned error")
 	}
 
@@ -1023,12 +1036,14 @@ func postIsu(c echo.Context) error {
 	err = json.Unmarshal(resBody, &isuFromJIA)
 	if err != nil {
 		c.Logger().Error(err)
+		fmt.Println("bad63")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	_, err = tx.Exec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad64")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -1039,12 +1054,14 @@ func postIsu(c echo.Context) error {
 		jiaUserID, jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad65")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad66")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	cacheGetIsuList.Forget(jiaUserID)
