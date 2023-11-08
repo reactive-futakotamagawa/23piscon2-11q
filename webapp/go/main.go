@@ -256,7 +256,7 @@ func doPostIsuCondition() {
 	if err != nil {
 		fmt.Printf("db error post isu condition: %v", err)
 	}
-	fmt.Println("PostIsuCondition Success")
+	fmt.Printf("PostIsuCondition Inserted %v\n", len(doRequest))
 	doPostLock.Unlock()
 	fmt.Println("doPostLock UnLocked")
 	// query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
