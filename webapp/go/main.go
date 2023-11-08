@@ -237,6 +237,16 @@ func doPostIsuCondition() {
 	copy(doRequest, postIsuConditionRequests)
 	postIsuConditionRequests = []PostIsuConditionRequests{}
 	args := make([]BulkInsertArg, 0, len(doRequest))
+
+	insertedIsuUUIDMap := map[string]bool{}
+	for _, cond := range doRequest {
+		insertedIsuUUIDMap[cond.JiaIsuUUID] = true
+	}
+	insertedIsuUUID := make([]string, 0, len(insertedIsuUUIDMap))
+	for key, _ := range insertedIsuUUIDMap {
+		insertedIsuUUID = append(insertedIsuUUID, key)
+	}
+
 	for _, cond := range doRequest {
 		timestamp := time.Unix(cond.Timestamp, 0)
 		args = append(args, BulkInsertArg{
@@ -258,6 +268,15 @@ func doPostIsuCondition() {
 	}
 	fmt.Printf("PostIsuCondition Inserted %v\n", len(doRequest))
 	doPostLock.Unlock()
+
+	go func() {
+		err := postIsuConditionCache(insertedIsuUUID)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}()
+
 	//fmt.Println("doPostLock UnLocked")
 	// query := "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`, `condition_level`) VALUES "
 	// for i, cond := range doRequest {
@@ -279,6 +298,38 @@ func doPostIsuCondition() {
 	//	c.Logger().Errorf("db error: %v", err)
 	//	return c.NoContent(http.StatusInternalServerError)
 	//}
+}
+
+type PostIsuConditionCacheRequest struct {
+	UUIDs []string `json:"uuids"`
+}
+
+func postIsuConditionCache(insertedIsuUUID []string) error {
+	data := PostIsuConditionCacheRequest{UUIDs: insertedIsuUUID}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	_, err = http.Post("http://172.31.38.16/cache/isuConditionCacheByIsuUUID", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func forgetIsuConditionCacheByIsuUUID(c echo.Context) error {
+	p := new(PostIsuConditionCacheRequest)
+	if err := c.Bind(p); err != nil {
+		return c.NoContent(http.StatusBadRequest)
+	}
+
+	fmt.Printf("Forget %v\n", len(p.UUIDs))
+	for _, uuid := range p.UUIDs {
+		isuConditionCacheByIsuUUID.Forget(uuid)
+	}
+
+	return c.NoContent(http.StatusOK)
 }
 
 func updateTrend() {
@@ -405,6 +456,8 @@ func main() {
 	e.GET("/isu/:jia_isu_uuid/graph", getIndex)
 	e.GET("/register", getIndex)
 	e.Static("/assets", frontendContentsPath+"/assets")
+
+	e.POST("/cache/isuConditionCacheByIsuUUID", forgetIsuConditionCacheByIsuUUID)
 
 	mySQLConnectionData = NewMySQLConnectionEnv()
 
