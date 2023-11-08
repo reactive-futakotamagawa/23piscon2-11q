@@ -1080,10 +1080,12 @@ func getIsuID(c echo.Context) error {
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
+			fmt.Println("bad70")
 			return c.String(http.StatusUnauthorized, "you are not signed in")
 		}
 
 		c.Logger().Error(err)
+		fmt.Println("bad71")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -1106,12 +1108,15 @@ func getIsuID(c echo.Context) error {
 	//	jiaUserID, jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("bad72")
 			return c.String(http.StatusNotFound, "not found: isu")
 		}
 		c.Logger().Errorf("db error: %v", err)
+		fmt.Println("bad73")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if isu.JIAUserID != jiaUserID {
+		fmt.Println("bad74")
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
