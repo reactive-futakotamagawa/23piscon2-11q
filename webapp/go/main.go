@@ -527,7 +527,7 @@ func main() {
 		}
 	}
 
-	if getEnv("USE_SOCKET", "0") == "1" {
+	if os.Getenv("USE_SOCKET") == "1" {
 		fmt.Println("USE_SOCKET")
 
 		// ここからソケット接続設定 ---
