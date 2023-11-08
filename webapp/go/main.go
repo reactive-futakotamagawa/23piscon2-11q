@@ -531,7 +531,7 @@ func main() {
 		fmt.Println("USE_SOCKET")
 
 		// ここからソケット接続設定 ---
-		socket_file := "/var/app.sock"
+		socket_file := "/tmp/app.sock"
 		os.Remove(socket_file)
 
 		l, err := net.Listen("unix", socket_file)
