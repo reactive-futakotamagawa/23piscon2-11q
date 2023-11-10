@@ -1185,15 +1185,16 @@ func postIsu(c echo.Context) error {
 	_, err = dbExec("INSERT INTO `isu` (`jia_isu_uuid`, `name`, `jia_user_id`) VALUES (?, ?, ?)",
 		jiaIsuUUID, isuName, jiaUserID)
 	if err != nil {
-		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
-		if err2 != nil {
-			fmt.Println("badbad64")
-			return c.NoContent(http.StatusInternalServerError)
-		}
 		mysqlErr, ok := err.(*mysql.MySQLError)
 
 		if ok && mysqlErr.Number == uint16(mysqlErrNumDuplicateEntry) {
 			return c.String(http.StatusConflict, "duplicated: isu")
+		}
+
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
 		}
 
 		c.Logger().Errorf("db error: %v", err)
