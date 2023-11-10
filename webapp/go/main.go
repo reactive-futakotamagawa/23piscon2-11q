@@ -810,6 +810,8 @@ func (c *IsuCache) GetAll() []Isu {
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
+	postIsuConditionRequests = []PostIsuConditionRequests{}
+	trendResponse = []TrendResponse{}
 	if os.Getenv("SERVER_ID") == "3" {
 		fmt.Println("Cache Purged")
 		isuConditionCacheByIsuUUID.Purge()
