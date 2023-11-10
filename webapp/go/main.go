@@ -1185,6 +1185,11 @@ func postIsu(c echo.Context) error {
 	_, err = dbExec("INSERT INTO `isu` (`jia_isu_uuid`, `name`, `jia_user_id`) VALUES (?, ?, ?)",
 		jiaIsuUUID, isuName, jiaUserID)
 	if err != nil {
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
+		}
 		mysqlErr, ok := err.(*mysql.MySQLError)
 
 		if ok && mysqlErr.Number == uint16(mysqlErrNumDuplicateEntry) {
@@ -1200,6 +1205,11 @@ func postIsu(c echo.Context) error {
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
+		}
 		c.Logger().Error(err)
 		fmt.Println("bad58")
 		return c.NoContent(http.StatusInternalServerError)
@@ -1207,6 +1217,11 @@ func postIsu(c echo.Context) error {
 
 	reqJIA, err := http.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(bodyJSON))
 	if err != nil {
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
+		}
 		c.Logger().Error(err)
 		fmt.Println("bad59")
 		return c.NoContent(http.StatusInternalServerError)
@@ -1215,6 +1230,11 @@ func postIsu(c echo.Context) error {
 	reqJIA.Header.Set("Content-Type", "application/json")
 	res, err := http.DefaultClient.Do(reqJIA)
 	if err != nil {
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
+		}
 		c.Logger().Errorf("failed to request to JIAService: %v", err)
 		fmt.Println("bad60")
 		return c.NoContent(http.StatusInternalServerError)
@@ -1223,12 +1243,22 @@ func postIsu(c echo.Context) error {
 
 	resBody, err := ioutil.ReadAll(res.Body)
 	if err != nil {
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
+		}
 		c.Logger().Error(err)
 		fmt.Println("bad61")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	if res.StatusCode != http.StatusAccepted {
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
+		}
 		c.Logger().Errorf("JIAService returned error: status code %v, message: %v", res.StatusCode, string(resBody))
 		fmt.Println("bad62")
 		return c.String(res.StatusCode, "JIAService returned error")
@@ -1237,6 +1267,11 @@ func postIsu(c echo.Context) error {
 	var isuFromJIA IsuFromJIA
 	err = json.Unmarshal(resBody, &isuFromJIA)
 	if err != nil {
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
+		}
 		c.Logger().Error(err)
 		fmt.Println("bad63")
 		return c.NoContent(http.StatusInternalServerError)
@@ -1244,6 +1279,11 @@ func postIsu(c echo.Context) error {
 
 	_, err = dbExec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
 	if err != nil {
+		_, err2 := dbExec("DELETE FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+		if err2 != nil {
+			fmt.Println("badbad64")
+			return c.NoContent(http.StatusInternalServerError)
+		}
 		c.Logger().Errorf("db error: %v", err)
 		fmt.Println("bad64")
 		return c.NoContent(http.StatusInternalServerError)
