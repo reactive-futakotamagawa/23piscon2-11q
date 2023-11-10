@@ -876,7 +876,7 @@ func postInitialize(c echo.Context) error {
 		cacheIsu.Purge()
 
 		benchStarted = true
-		benchStartTime = time.Now().Add(-time.Second * 10)
+		benchStartTime = time.Now().Add(time.Second * (-10))
 
 		return c.JSONBlob(http.StatusOK, jsonEncode(InitializeResponse{
 			Language: "go",
