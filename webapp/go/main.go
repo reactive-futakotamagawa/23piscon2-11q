@@ -1885,6 +1885,9 @@ var trendResponse []TrendResponse
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
 	//return c.JSON(http.StatusOK, trendResponse)
+	if len(trendResponse) == 0 {
+		updateTrend()
+	}
 	return c.JSONBlob(http.StatusOK, jsonEncode(trendResponse))
 }
 
