@@ -344,10 +344,6 @@ func jsonEncode(res any) []byte {
 }
 
 func updateTrend() {
-	if rand.Float64() <= dropProbabilityTrend {
-		return
-	}
-
 	var isuList []Isu
 	isuList = isuCache.GetAll()
 	if len(isuList) == 0 || isuList == nil {
@@ -521,6 +517,19 @@ func main() {
 				for {
 					select {
 					case _ = <-tickerPostIsuCondition.C:
+						if benchTime >= time.Second*10 {
+							dropProbability = 0.0
+						} else if benchTime >= time.Second*20 {
+							dropProbability = 0.0
+						} else if benchTime >= time.Second*30 {
+							dropProbability = 0.0
+						} else if benchTime >= time.Second*40 {
+							dropProbability = 0.2
+						} else if benchTime >= time.Second*50 {
+							dropProbability = 0.4
+						} else {
+							dropProbability = 0.6
+						}
 						doPostIsuCondition()
 					}
 				}
@@ -534,12 +543,28 @@ func main() {
 		if err != nil {
 			e.Logger.Fatalf("failed to convert TICKER_GET_TREND: %v", err)
 		} else {
-			tickerGetTrend := time.NewTicker(5 * time.Millisecond)
+			tickerGetTrend := time.NewTicker(2 * time.Millisecond)
+			n := 1
+			i := 0
 			go func() {
 				for {
 					select {
 					case _ = <-tickerGetTrend.C:
-						updateTrend()
+						i += 1
+						if i%n == 0 {
+							updateTrend()
+						}
+						if benchTime >= time.Second*10 {
+							n = 10
+						} else if benchTime >= time.Second*20 {
+							n = 30
+						} else if benchTime >= time.Second*30 {
+							n = 50
+						} else if benchTime >= time.Second*40 {
+							n = 100
+						} else {
+							n = 1000
+						}
 					}
 				}
 			}()
@@ -552,42 +577,7 @@ func main() {
 			select {
 			case _ = <-tickerBenchTimer.C:
 				if benchStarted {
-					fmt.Println(benchTime)
 					benchTime = time.Since(benchStartTime)
-
-					if benchTime <= time.Second*10 {
-						dropProbabilityTrend = 0.0
-					} else if benchTime >= time.Second*10 {
-						dropProbabilityTrend = 0.0
-					} else if benchTime >= time.Second*20 {
-						dropProbabilityTrend = 0.0
-					} else if benchTime >= time.Second*30 {
-						dropProbabilityTrend = 0.6
-					} else if benchTime >= time.Second*40 {
-						dropProbabilityTrend = 0.8
-					} else if benchTime >= time.Second*50 {
-						dropProbabilityTrend = 1
-					} else {
-						dropProbabilityTrend = 1
-					}
-
-					if benchTime <= time.Second*10 {
-						dropProbability = 0.0
-					} else if benchTime >= time.Second*10 {
-						dropProbability = 0.0
-					} else if benchTime >= time.Second*20 {
-						dropProbability = 0.0
-					} else if benchTime >= time.Second*30 {
-						dropProbability = 0.0
-					} else if benchTime >= time.Second*40 {
-						dropProbability = 0.3
-					} else if benchTime >= time.Second*50 {
-						dropProbability = 0.6
-					} else if benchTime >= time.Second*55 {
-						dropProbability = 1
-					} else {
-						dropProbability = 0.0
-					}
 				} else {
 					benchTime = -1
 				}
@@ -1960,7 +1950,6 @@ type PostIsuConditionRequests struct {
 var postIsuConditionRequests []PostIsuConditionRequests
 
 var dropProbability float64
-var dropProbabilityTrend float64
 
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
