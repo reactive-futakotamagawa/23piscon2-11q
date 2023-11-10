@@ -1269,7 +1269,7 @@ func postIsu(c echo.Context) error {
 		fmt.Println("bad65")
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	if isuPointer != nil {
+	if isuPointer == nil {
 		c.Logger().Errorf("db error: %v", err)
 		fmt.Println("bad65")
 		return c.NoContent(http.StatusInternalServerError)
