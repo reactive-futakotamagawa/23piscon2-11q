@@ -867,8 +867,6 @@ func (c *IsuCache) GetAll() []Isu {
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
-	benchStarted = true
-	benchStartTime = time.Now()
 	postIsuConditionRequests = []PostIsuConditionRequests{}
 	trendResponse = []TrendResponse{}
 	if os.Getenv("SERVER_ID") == "3" {
@@ -876,6 +874,9 @@ func postInitialize(c echo.Context) error {
 		isuConditionCacheByIsuUUID.Purge()
 		isuCountByIsuUUID.Purge()
 		cacheIsu.Purge()
+
+		benchStarted = true
+		benchStartTime = time.Now().Add(-time.Second * 10)
 
 		return c.JSONBlob(http.StatusOK, jsonEncode(InitializeResponse{
 			Language: "go",
@@ -969,6 +970,9 @@ func postInitialize(c echo.Context) error {
 			fmt.Println(err)
 		}
 	}
+
+	benchStarted = true
+	benchStartTime = time.Now()
 
 	return c.JSONBlob(http.StatusOK, jsonEncode(InitializeResponse{
 		Language: "go",
