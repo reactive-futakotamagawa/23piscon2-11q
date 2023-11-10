@@ -343,6 +343,9 @@ func jsonEncode(res any) []byte {
 }
 
 func updateTrend() {
+	if time.Since(benchTime) > 30*time.Second {
+		return
+	}
 	var isuList []Isu
 	isuList = isuCache.GetAll()
 	if len(isuList) == 0 || isuList == nil {
@@ -806,6 +809,8 @@ func (c *IsuCache) GetAll() []Isu {
 	return isu
 }
 
+var benchTime time.Time
+
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
@@ -909,6 +914,8 @@ func postInitialize(c echo.Context) error {
 			fmt.Println(err)
 		}
 	}
+
+	benchTime = time.Now()
 
 	return c.JSONBlob(http.StatusOK, jsonEncode(InitializeResponse{
 		Language: "go",
