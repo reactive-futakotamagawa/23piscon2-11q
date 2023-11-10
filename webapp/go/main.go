@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"github.com/bytedance/sonic"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -432,10 +431,6 @@ func updateTrend() {
 	trendResponse = res
 }
 
-var benchStartTime time.Time
-var benchTime time.Duration
-var benchStarted bool
-
 func main() {
 	//go standalone.Integrate(":8888")
 
@@ -517,19 +512,6 @@ func main() {
 				for {
 					select {
 					case _ = <-tickerPostIsuCondition.C:
-						if benchTime >= time.Second*10 {
-							dropProbability = 0.0
-						} else if benchTime >= time.Second*20 {
-							dropProbability = 0.0
-						} else if benchTime >= time.Second*30 {
-							dropProbability = 0.0
-						} else if benchTime >= time.Second*40 {
-							dropProbability = 0.2
-						} else if benchTime >= time.Second*50 {
-							dropProbability = 0.4
-						} else {
-							dropProbability = 0.6
-						}
 						doPostIsuCondition()
 					}
 				}
@@ -539,51 +521,21 @@ func main() {
 
 	tickerGetTrendEnv := os.Getenv("TICKER_GET_TREND")
 	if tickerGetTrendEnv != "" {
-		//getTrendTime, err := strconv.Atoi(tickerGetTrendEnv)
+		getTrendTime, err := strconv.Atoi(tickerGetTrendEnv)
 		if err != nil {
 			e.Logger.Fatalf("failed to convert TICKER_GET_TREND: %v", err)
 		} else {
-			tickerGetTrend := time.NewTicker(2 * time.Millisecond)
-			n := 1
-			i := 0
+			tickerGetTrend := time.NewTicker(time.Duration(getTrendTime) * time.Millisecond)
 			go func() {
 				for {
 					select {
 					case _ = <-tickerGetTrend.C:
-						i += 1
-						if i%n == 0 {
-							updateTrend()
-						}
-						if benchTime >= time.Second*10 {
-							n = 10
-						} else if benchTime >= time.Second*20 {
-							n = 30
-						} else if benchTime >= time.Second*30 {
-							n = 50
-						} else if benchTime >= time.Second*40 {
-							n = 100
-						} else {
-							n = 1000
-						}
+						updateTrend()
 					}
 				}
 			}()
 		}
 	}
-
-	tickerBenchTimer := time.NewTicker(100 * time.Millisecond)
-	go func() {
-		for {
-			select {
-			case _ = <-tickerBenchTimer.C:
-				if benchStarted {
-					benchTime = time.Since(benchStartTime)
-				} else {
-					benchTime = -1
-				}
-			}
-		}
-	}()
 
 	if os.Getenv("USE_SOCKET") == "1" {
 		fmt.Println("USE_SOCKET")
@@ -857,8 +809,6 @@ func (c *IsuCache) GetAll() []Isu {
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
-	benchStarted = true
-	benchStartTime = time.Now()
 	postIsuConditionRequests = []PostIsuConditionRequests{}
 	trendResponse = []TrendResponse{}
 	if os.Getenv("SERVER_ID") == "3" {
@@ -1949,17 +1899,16 @@ type PostIsuConditionRequests struct {
 
 var postIsuConditionRequests []PostIsuConditionRequests
 
-var dropProbability float64
-
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
 	//fmt.Println("PostIsuCondition Requested")
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
-	if rand.Float64() <= dropProbability {
-		c.Logger().Warnf("drop post isu condition request")
-		return c.NoContent(http.StatusAccepted)
-	}
+	//dropProbability := 0.5
+	//if rand.Float64() <= dropProbability {
+	//	c.Logger().Warnf("drop post isu condition request")
+	//	return c.NoContent(http.StatusAccepted)
+	//}
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 	if jiaIsuUUID == "" {
