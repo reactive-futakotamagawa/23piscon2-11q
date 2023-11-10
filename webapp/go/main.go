@@ -343,7 +343,7 @@ func jsonEncode(res any) []byte {
 }
 
 func updateTrend() {
-	if time.Since(benchTime) > 30*time.Second {
+	if time.Since(benchTime) > 15*time.Second {
 		return
 	}
 	var isuList []Isu
