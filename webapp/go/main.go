@@ -814,7 +814,6 @@ var benchTime time.Time
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
-	benchTime = time.Time{}
 	postIsuConditionRequests = []PostIsuConditionRequests{}
 	trendResponse = []TrendResponse{}
 	if os.Getenv("SERVER_ID") == "3" {
