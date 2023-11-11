@@ -816,6 +816,7 @@ var benchTime time.Time
 func postInitialize(c echo.Context) error {
 	postIsuConditionRequests = []PostIsuConditionRequests{}
 	trendResponse = []TrendResponse{}
+	isuCache = IsuCache{Isu: make(map[string]Isu)}
 	if os.Getenv("SERVER_ID") == "3" {
 		// fmt.Println("Cache Purged")
 		isuConditionCacheByIsuUUID.Purge()
