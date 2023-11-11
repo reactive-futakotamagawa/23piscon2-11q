@@ -343,7 +343,7 @@ func jsonEncode(res any) []byte {
 }
 
 func updateTrend() {
-	if time.Since(benchTime) > 12*time.Second {
+	if time.Since(benchTime) > 14*time.Second {
 		return
 	}
 	var isuList []Isu
@@ -522,23 +522,23 @@ func main() {
 		}
 	}
 
-	tickerGetTrendEnv := os.Getenv("TICKER_GET_TREND")
-	if tickerGetTrendEnv != "" {
-		getTrendTime, err := strconv.Atoi(tickerGetTrendEnv)
-		if err != nil {
-			e.Logger.Fatalf("failed to convert TICKER_GET_TREND: %v", err)
-		} else {
-			tickerGetTrend := time.NewTicker(time.Duration(getTrendTime) * time.Millisecond)
-			go func() {
-				for {
-					select {
-					case _ = <-tickerGetTrend.C:
-						updateTrend()
-					}
-				}
-			}()
-		}
-	}
+	//tickerGetTrendEnv := os.Getenv("TICKER_GET_TREND")
+	//if tickerGetTrendEnv != "" {
+	//	getTrendTime, err := strconv.Atoi(tickerGetTrendEnv)
+	//	if err != nil {
+	//		e.Logger.Fatalf("failed to convert TICKER_GET_TREND: %v", err)
+	//	} else {
+	//		tickerGetTrend := time.NewTicker(time.Duration(getTrendTime) * time.Millisecond)
+	//		go func() {
+	//			for {
+	//				select {
+	//				case _ = <-tickerGetTrend.C:
+	//					updateTrend()
+	//				}
+	//			}
+	//		}()
+	//	}
+	//}
 
 	if os.Getenv("USE_SOCKET") == "1" {
 		fmt.Println("USE_SOCKET")
@@ -1892,9 +1892,10 @@ var trendResponse []TrendResponse
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
 	//return c.JSON(http.StatusOK, trendResponse)
-	if len(trendResponse) == 0 {
-		updateTrend()
-	}
+	updateTrend()
+	//if len(trendResponse) == 0 {
+	//	updateTrend()
+	//}
 	return c.JSONBlob(http.StatusOK, jsonEncode(trendResponse))
 }
 
