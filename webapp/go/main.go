@@ -1891,7 +1891,7 @@ var trendResponse []TrendResponse
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
-	if time.Since(benchTime) > 12*time.Second {
+	if time.Since(benchTime) > 14*time.Second {
 		return c.JSONBlob(http.StatusOK, jsonEncode(trendResponse))
 	}
 	var isuList []Isu
